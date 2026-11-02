@@ -1,8 +1,8 @@
 {
   "artifact": {
-    "version": "1.0.7-dev.5c094f6",
-    "commit": "5c094f6e9a264f0dc54e2fde9731a37a97ed197c",
-    "sha256": "623db936a21e55919c2c3951a2557abba99ac93c60bc76b98771fdb55e6c54e1",
+    "version": "1.0.10-dev.a37877c",
+    "commit": "a37877c1490027ee48e5722bf602adf34f95a6dc",
+    "sha256": "d6e088700694c0528e80e76036149b4b0d525ba130b61c53773d6624e25010d3",
     "ref": "preview",
     "flavor": "Forever",
     "contract_version": 4,
