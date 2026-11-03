@@ -72,8 +72,20 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .cache
+          RELEASE_JSON="$(curl --fail --silent --show-error --location \
+            https://api.github.com/repos/Questie/QuestieDB/releases/tags/preview)"
+          ASSET_COUNT="$(jq '[.assets[] | select(.name | test("^QuestieDB-.+-Forever[.]zip$"))] | length' <<<"$RELEASE_JSON")"
+          if [[ "$ASSET_COUNT" != 1 ]]; then
+            echo "Expected exactly one QuestieDB-<version>-Forever.zip asset in QuestieDB release 'preview', found $ASSET_COUNT." >&2
+            exit 1
+          fi
+          ASSET_URL="$(jq -r '[.assets[] | select(.name | test("^QuestieDB-.+-Forever[.]zip$"))][0].browser_download_url // empty' <<<"$RELEASE_JSON")"
+          if [[ -z "$ASSET_URL" ]]; then
+            echo "QuestieDB release 'preview' has a matching QuestieDB-<version>-Forever.zip asset without a download URL." >&2
+            exit 1
+          fi
           curl --fail --silent --show-error --location \
-            "https://github.com/Questie/QuestieDB/releases/download/preview/QuestieDB-Forever.zip" \
+            "$ASSET_URL" \
             --output .cache/QuestieDB-Forever.zip
           echo "sha=$(sha256sum .cache/QuestieDB-Forever.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
