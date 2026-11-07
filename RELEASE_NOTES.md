@@ -1,4 +1,4 @@
-## 0.3.9 - 2026-11-06
+## 0.3.10 - 2026-11-07
 
-- Update the QuestieDB Forever artifact to `049f6fdb5baaf30938fb1773d721ed07d695898ed92691ae613f75b806d03bdd` (build `21be34023b72cf2ec3027cb9a61a8b72a1910857`).
-- Ship 5233 quests with 6906 coordinate pins (678 static instance quests, 215 yearly quests).
+- Update the QuestieDB Forever artifact to `445e01d28b4f9087301561390aec4b7aecd580f1636e48db717c155b8a182056` (build `7c1cc5c72041c439ebff583f36c9357edd5a6787`).
+- Ship 5233 quests with 7305 coordinate pins (678 static instance quests, 215 yearly quests).
