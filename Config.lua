@@ -4,6 +4,8 @@ ns.name = ADDON_NAME
 ns.defaults = {
     enabled = true,
     showWorldMapPins = true,
+    enablePinTracking = true,
+    trackOnWorldMaps = false,
     waypointProvider = "blizzard",
     showTrivial = false,
     trivialLevelGap = 9,
@@ -1005,7 +1007,7 @@ function ns.TryRegisterSettings()
                 "Show spawn clusters",
                 "Group nearby spawn points into one pin. Hovering shows the spawn count and every location on the map. When off, show one pin per quest."
             )
-            spawnClusters:SetPoint("TOPLEFT", repeatable, "BOTTOMLEFT", 0, -12)
+            spawnClusters:SetPoint("TOPLEFT", repeatable, "BOTTOMLEFT", 0, 0)
 
             local trivial = CreateOptionCheckbox(
                 self,
@@ -1013,7 +1015,7 @@ function ns.TryRegisterSettings()
                 "Show low-level quests",
                 "When off, hides pins for quests too far below your level. Set how far with the slider below."
             )
-            trivial:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, -12)
+            trivial:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, 0)
 
             local trivialGap = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
             trivialGap:SetPoint("TOPLEFT", trivial, "BOTTOMLEFT", 8, -24)
@@ -1072,12 +1074,11 @@ function ns.TryRegisterSettings()
                 "Show quests on NPC tooltips",
                 "List quests you can accept or turn in from this NPC (accept eligibility matches start pins; turn-ins require an active, complete quest)."
             )
-            npcTooltips:SetPoint("TOPLEFT", iconScale, "BOTTOMLEFT", -4, -24)
 
             local navigationHeading = self:CreateFontString(nil, "ARTWORK", "GameFontNormal")
             navigationHeading:SetText("Navigation")
             local providerLabel = self:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-            providerLabel:SetPoint("TOPLEFT", navigationHeading, "BOTTOMLEFT", 0, -12)
+            providerLabel:SetPoint("TOPLEFT", navigationHeading, "BOTTOMLEFT", 0, -8)
             providerLabel:SetText("Waypoint provider")
             local provider = CreateFrame("DropdownButton", nil, self, "WowStyle1DropdownTemplate")
             provider:SetPoint("TOPLEFT", providerLabel, "BOTTOMLEFT", 0, -6)
@@ -1099,6 +1100,13 @@ function ns.TryRegisterSettings()
                 "Show Blizzard's floating destination marker and distance for the tracked quest or map pin. This changes the game's shared navigation setting."
             )
             inWorld:SetPoint("TOPLEFT", provider, "BOTTOMLEFT", -4, -8)
+            local tracking = CreateOptionCheckbox(self, "enablePinTracking", "Click pins to track quest starts",
+                "When off, clicks pass through quest start pins to the map. Pin hover and Shift-click hiding are unavailable. By default, tracking is available on zone maps.")
+            tracking:SetPoint("TOPLEFT", inWorld, "BOTTOMLEFT", 0, 0)
+            local worldTracking = CreateOptionCheckbox(self, "trackOnWorldMaps", "Track from world and continent maps",
+                "Allow clicks on quest start pins to track them on world and continent maps. When off, pin hover and Shift-click hiding are unavailable on those maps.")
+            worldTracking:SetPoint("TOPLEFT", tracking, "BOTTOMLEFT", 0, 0)
+            npcTooltips:SetPoint("TOPLEFT", worldTracking, "BOTTOMLEFT", 0, 0)
 
             local automationHeading = self:CreateFontString(nil, "ARTWORK", "GameFontNormal")
             automationHeading:SetPoint("TOPLEFT", mapHeading, "TOPLEFT", 300, 0)
@@ -1160,7 +1168,7 @@ function ns.TryRegisterSettings()
                 "Hide quest tracker in combat",
                 "Makes the default objective tracker transparent while you are in combat and restores its opacity afterward. Keeps your manual collapse setting."
             )
-            hideTracker:SetPoint("TOPLEFT", turnin, "BOTTOMLEFT", 0, -12)
+            hideTracker:SetPoint("TOPLEFT", turnin, "BOTTOMLEFT", 0, 0)
 
             local debugBox = CreateOptionCheckbox(
                 self,
@@ -1171,7 +1179,7 @@ function ns.TryRegisterSettings()
             debugBox:SetPoint("TOPLEFT", hideTracker, "BOTTOMLEFT", 0, 0)
 
             local resetHidden = CreateFrame("Button", nil, self, "UIPanelButtonTemplate")
-            resetHidden:SetPoint("TOPLEFT", debugBox, "BOTTOMLEFT", 4, -16)
+            resetHidden:SetPoint("TOPLEFT", debugBox, "BOTTOMLEFT", 4, -8)
             resetHidden:SetSize(200, 22)
             resetHidden:SetText("Reset hidden quest pins")
             local resetHiddenCaption = self:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
@@ -1197,10 +1205,10 @@ function ns.TryRegisterSettings()
             end)
             optionChecks[#optionChecks + 1] = resetHidden
 
-            navigationHeading:SetPoint("TOPLEFT", resetHiddenCaption, "BOTTOMLEFT", 0, -16)
+            navigationHeading:SetPoint("TOPLEFT", resetHiddenCaption, "BOTTOMLEFT", 0, -8)
 
             local slash = self:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-            slash:SetPoint("TOPLEFT", npcTooltips, "BOTTOMLEFT", 4, -16)
+            slash:SetPoint("TOPLEFT", iconScale, "BOTTOMLEFT", -4, -16)
             slash:SetText("Type /fqp for commands and troubleshooting.")
         end
         ns.SyncSettingsCheckboxes()

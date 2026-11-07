@@ -231,6 +231,8 @@ cases["pin_filters_runtime.test_category_defaults_and_saved_false_values"] = fun
             GetRealmName = function() return realmName end
             UnitLevel = function() return 30 end
             C_QuestLog = {}
+            C_Map = { GetMapInfo = function() return { mapType = 3 } end }
+            WorldMapFrame = { GetMapID = function() return 1 end }
             gamepadEnabled = false
             timerQueue = {}
             C_Timer = { After = function(_, callback) table.insert(timerQueue, callback) end }
@@ -632,6 +634,8 @@ cases["pin_filters_runtime.test_gamepad_pin_callbacks_run_after_map_input_handli
             GetRealmName = function() return realmName end
             UnitLevel = function() return 30 end
             C_QuestLog = {}
+            C_Map = { GetMapInfo = function() return { mapType = 3 } end }
+            WorldMapFrame = { GetMapID = function() return 1 end }
             gamepadEnabled = false
             timerQueue = {}
             C_Timer = { After = function(_, callback) table.insert(timerQueue, callback) end }
@@ -1289,6 +1293,8 @@ cases["pin_filters_runtime.test_shift_click_hides_every_quest_on_stacked_pin"] =
             GetRealmName = function() return realmName end
             UnitLevel = function() return 30 end
             C_QuestLog = {}
+            C_Map = { GetMapInfo = function() return { mapType = 3 } end }
+            WorldMapFrame = { GetMapID = function() return 1 end }
             gamepadEnabled = false
             timerQueue = {}
             C_Timer = { After = function(_, callback) table.insert(timerQueue, callback) end }
@@ -1355,6 +1361,8 @@ cases["pin_filters_runtime.test_plain_click_still_tracks"] = function()
             GetRealmName = function() return realmName end
             UnitLevel = function() return 30 end
             C_QuestLog = {}
+            C_Map = { GetMapInfo = function() return { mapType = 3 } end }
+            WorldMapFrame = { GetMapID = function() return 1 end }
             gamepadEnabled = false
             timerQueue = {}
             C_Timer = { After = function(_, callback) table.insert(timerQueue, callback) end }
@@ -1396,6 +1404,13 @@ end
             ForeverQuestPinsMapPinMixin.OnClick(pin, "LeftButton")
             assert(tracked == 101)
             assert(not ns.IsQuestHidden(101) and not ns.IsQuestHidden(102))
+            tracked = nil
+            ns.SetOption("enablePinTracking", false)
+            ForeverQuestPinsMapPinMixin.OnClick(pin, "LeftButton")
+            assert(tracked == nil)
+            ns.SetOption("enablePinTracking", true)
+            ForeverQuestPinsMapPinMixin.OnClick(pin, "LeftButton")
+            assert(tracked == 101)
 
 end
 cases["quest_info_runtime.test_offered_quests_repair_starters_without_map_coordinates"] = function()
@@ -2622,7 +2637,7 @@ local function setupPinRendering()
         return {
             SetScript = function(self, event, fn) self.scripts = self.scripts or {}; self.scripts[event] = fn end,
             RegisterForClicks = function() end,
-            EnableMouse = function() end, SetParent = function(self, parent) self.parent = parent end,
+            EnableMouse = function(self, enabled) self.mouseEnabled = enabled end, SetParent = function(self, parent) self.parent = parent end,
             CreateTexture = function(self)
                 local created = texture()
                 self.textures = self.textures or {}
@@ -2675,6 +2690,7 @@ local function setupPinRendering()
         IsOnQuest = function() return false end,
     }
     C_Map = {
+        GetMapInfo = function() return { mapType = 3 } end,
         GetPlayerMapPosition = function()
             return { GetXY = function() return 0.5, 0.5 end }
         end,
@@ -2702,6 +2718,32 @@ local function setupPinRendering()
     }
     assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
     assert(loadfile("MapPins.lua"))("ForeverQuestPins", ns)
+end
+
+cases["map_pins_runtime.tracking_respects_map_level"] = function()
+    setupPinRendering()
+    local mapType = 3
+    C_Map.GetMapInfo = function() return { mapType = mapType } end
+    ns.MapPins:Refresh("zone")
+    assert(pin.mouseEnabled == true)
+    pin.scripts.OnClick(pin, "LeftButton")
+    assert(trackedQuestID == 101)
+    trackedQuestID = nil
+    for _, value in ipairs({ 1, 2 }) do
+        mapType = value
+        ns.MapPins:Refresh("world")
+        assert(pin.mouseEnabled == false)
+        pin.scripts.OnClick(pin, "LeftButton")
+        assert(trackedQuestID == nil)
+    end
+    options.trackOnWorldMaps = true
+    ns.MapPins:Refresh("allowed")
+    assert(pin.mouseEnabled == true)
+    pin.scripts.OnClick(pin, "LeftButton")
+    assert(trackedQuestID == 101)
+    options.enablePinTracking = false
+    ns.MapPins:Refresh("disabled")
+    assert(pin.mouseEnabled == false)
 end
 
 cases["map_pins_runtime.icon_scale_changes_rendered_pin_size"] = function()

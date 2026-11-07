@@ -967,12 +967,26 @@ local function HidePinQuests(pin)
     end
 end
 
+local function PinTrackingEnabled()
+    if ns.GetOption("enablePinTracking") == false then return false end
+    if ns.GetOption("trackOnWorldMaps") then return true end
+    local mapID = ns.GetViewedMapID()
+    local info = mapID and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
+    if not info or not info.mapType then return false end
+    local types = Enum and Enum.UIMapType
+    return info.mapType ~= (types and types.World or 1)
+        and info.mapType ~= (types and types.Continent or 2)
+end
+
 local function OnPinClick(pin, shiftDown)
     if shiftDown == nil then
         shiftDown = IsShiftKeyDown and IsShiftKeyDown() or false
     end
     if shiftDown then
         HidePinQuests(pin)
+        return
+    end
+    if not PinTrackingEnabled() then
         return
     end
     local data = pin.data
@@ -1123,7 +1137,11 @@ local function AcquirePin(parent)
                 ForeverQuestPinsMapPinMixin[key] = value
             end
         end
-        return WorldMapFrame:AcquirePin("ForeverQuestPinsMapPinTemplate")
+        local pin = WorldMapFrame:AcquirePin("ForeverQuestPinsMapPinTemplate")
+        if pin and pin.EnableMouse then
+            pin:EnableMouse(PinTrackingEnabled())
+        end
+        return pin
     end
     local pin = table.remove(pool)
     if not pin then
@@ -1141,6 +1159,7 @@ local function AcquirePin(parent)
         pin._fqpGetCenter = pin.GetCenter
     end
     pin:SetParent(parent)
+    if pin.EnableMouse then pin:EnableMouse(PinTrackingEnabled()) end
     pin.placedParent = nil
     if pin.SetIgnoreParentScale then
         pin:SetIgnoreParentScale(false)
@@ -1173,6 +1192,9 @@ end
 
 function ForeverQuestPinsMapPinMixin:OnClick(button)
     if button ~= "LeftButton" then
+        return
+    end
+    if not PinTrackingEnabled() then
         return
     end
     if IsGamepadUIEnabled() and C_Timer and C_Timer.After then
