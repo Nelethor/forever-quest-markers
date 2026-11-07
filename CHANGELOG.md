@@ -2,6 +2,12 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 0.4.0 - 2026-11-07
+
+- Add an option to let clicks pass through quest start pins.
+- Limit tracking clicks to zone maps by default, with an option for world and continent maps.
+- Reorganize the options panel to spread map controls across both columns.
+
 ## 0.3.10 - 2026-11-07
 
 - Update the QuestieDB Forever artifact to `445e01d28b4f9087301561390aec4b7aecd580f1636e48db717c155b8a182056` (build `7c1cc5c72041c439ebff583f36c9357edd5a6787`).
