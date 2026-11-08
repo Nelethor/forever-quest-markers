@@ -2,6 +2,11 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 0.4.1 - 2026-11-07
+
+- Keep quest pin tooltips available when click tracking is disabled.
+- Add the click tracking option to the world map Show menu.
+
 ## 0.4.0 - 2026-11-07
 
 - Add an option to let clicks pass through quest start pins.
