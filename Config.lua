@@ -360,6 +360,7 @@ function ns.TryRegisterWorldMapDropdown()
         { "showSeasonal", "Seasonal / holiday quest" },
         { "showWarEffort", "AQ war effort" },
         { "showRepeatable", "Repeatable quest" },
+        { "enablePinTracking", "Click pins to track quest starts" },
     }
     Menu.ModifyMenu("MENU_WORLD_MAP_TRACKING", function(_, rootDescription)
         rootDescription:CreateDivider()
@@ -1101,10 +1102,10 @@ function ns.TryRegisterSettings()
             )
             inWorld:SetPoint("TOPLEFT", provider, "BOTTOMLEFT", -4, -8)
             local tracking = CreateOptionCheckbox(self, "enablePinTracking", "Click pins to track quest starts",
-                "When off, clicks pass through quest start pins to the map. Pin hover and Shift-click hiding are unavailable. By default, tracking is available on zone maps.")
+                "When off, clicks pass through quest start pins to the map. Tooltips remain available, but Shift-click hiding is unavailable. By default, tracking is available on zone maps.")
             tracking:SetPoint("TOPLEFT", inWorld, "BOTTOMLEFT", 0, 0)
             local worldTracking = CreateOptionCheckbox(self, "trackOnWorldMaps", "Track from world and continent maps",
-                "Allow clicks on quest start pins to track them on world and continent maps. When off, pin hover and Shift-click hiding are unavailable on those maps.")
+                "Allow clicks on quest start pins to track them on world and continent maps. When off, tooltips remain available, but Shift-click hiding is unavailable on those maps.")
             worldTracking:SetPoint("TOPLEFT", tracking, "BOTTOMLEFT", 0, 0)
             npcTooltips:SetPoint("TOPLEFT", worldTracking, "BOTTOMLEFT", 0, 0)
 

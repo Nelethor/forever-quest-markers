@@ -1,5 +1,4 @@
-## 0.4.0 - 2026-11-07
+## 0.4.1 - 2026-11-07
 
-- Add an option to let clicks pass through quest start pins.
-- Limit tracking clicks to zone maps by default, with an option for world and continent maps.
-- Reorganize the options panel to spread map controls across both columns.
+- Keep quest pin tooltips available when click tracking is disabled.
+- Add the click tracking option to the world map Show menu.
