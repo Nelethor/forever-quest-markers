@@ -48,7 +48,7 @@ Escape → Options → AddOns → **Forever Quest Pins**, use the world map's **
 |--------|---------|
 | Show quest-start pins | On |
 | Show quest pins on world and continent maps | On (turn off to keep pins on zone, city, and dungeon maps) |
-| Click pins to track quest starts | On for zone maps (turn off to let clicks pass through pins; pin tooltips and Shift-click hiding are unavailable) |
+| Click pins to track quest starts | On for zone maps (turn off to let clicks pass through pins; pin tooltips remain available, but Shift-click hiding is unavailable) |
 | Track from world and continent maps | Off |
 | Show trivial / low-level pins | Off (hides pins for quests too far below your character) |
 | Low-level range slider | 9 (hide quests 9+ levels below you; adjustable from 3 to 15, inactive while low-level pins are shown) |

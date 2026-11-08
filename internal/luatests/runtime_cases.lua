@@ -439,15 +439,17 @@ end
             local buttons = {}
             modify(nil, { CreateDivider = function() end, CreateTitle = function() end,
                 Insert = function(_, button) table.insert(buttons, button) end })
-            assert(#buttons == 9)
+            assert(#buttons == 10)
             assert(buttons[1].enabled == nil)
-            for i = 2, #buttons do assert(buttons[i].enabled()) end
+            assert(buttons[10].label == "Click pins to track quest starts")
+            assert(buttons[10].enabled == nil)
+            for i = 2, 9 do assert(buttons[i].enabled()) end
             ns.SetOption("enabled", false)
-            for i = 2, #buttons do assert(not buttons[i].enabled()) end
+            for i = 2, 9 do assert(not buttons[i].enabled()) end
             ns.SetOption("enabled", true)
-            for i = 2, #buttons do assert(buttons[i].enabled()) end
+            for i = 2, 9 do assert(buttons[i].enabled()) end
             local keys = { "enabled", "showWorldMapPins", "showNormal", "showClass", "showDungeon",
-                "showProfession", "showSeasonal", "showWarEffort", "showRepeatable" }
+                "showProfession", "showSeasonal", "showWarEffort", "showRepeatable", "enablePinTracking" }
             for i, button in ipairs(buttons) do
                 assert(not button.label:find("Show", 1, true))
                 local before = ns.GetOption(keys[i])
@@ -2637,7 +2639,8 @@ local function setupPinRendering()
         return {
             SetScript = function(self, event, fn) self.scripts = self.scripts or {}; self.scripts[event] = fn end,
             RegisterForClicks = function() end,
-            EnableMouse = function(self, enabled) self.mouseEnabled = enabled end, SetParent = function(self, parent) self.parent = parent end,
+            EnableMouse = function(self, enabled) self.mouseEnabled = enabled; self.clickEnabled = enabled end,
+            SetMouseClickEnabled = function(self, enabled) self.clickEnabled = enabled end, SetParent = function(self, parent) self.parent = parent end,
             CreateTexture = function(self)
                 local created = texture()
                 self.textures = self.textures or {}
@@ -2725,25 +2728,30 @@ cases["map_pins_runtime.tracking_respects_map_level"] = function()
     local mapType = 3
     C_Map.GetMapInfo = function() return { mapType = mapType } end
     ns.MapPins:Refresh("zone")
-    assert(pin.mouseEnabled == true)
+    assert(pin.mouseEnabled == true and pin.clickEnabled == true)
     pin.scripts.OnClick(pin, "LeftButton")
     assert(trackedQuestID == 101)
     trackedQuestID = nil
     for _, value in ipairs({ 1, 2 }) do
         mapType = value
         ns.MapPins:Refresh("world")
-        assert(pin.mouseEnabled == false)
+        assert(pin.mouseEnabled == true and pin.clickEnabled == false)
         pin.scripts.OnClick(pin, "LeftButton")
         assert(trackedQuestID == nil)
     end
     options.trackOnWorldMaps = true
     ns.MapPins:Refresh("allowed")
-    assert(pin.mouseEnabled == true)
+    assert(pin.mouseEnabled == true and pin.clickEnabled == true)
     pin.scripts.OnClick(pin, "LeftButton")
     assert(trackedQuestID == 101)
     options.enablePinTracking = false
     ns.MapPins:Refresh("disabled")
-    assert(pin.mouseEnabled == false)
+    assert(pin.mouseEnabled == true and pin.clickEnabled == false)
+    pin.scripts.OnEnter(pin)
+    assert(tooltipLines[1] == "Quest")
+    for _, line in ipairs(tooltipLines) do
+        assert(not line:find("Click to track", 1, true))
+    end
 end
 
 cases["map_pins_runtime.icon_scale_changes_rendered_pin_size"] = function()

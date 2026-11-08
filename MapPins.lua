@@ -720,6 +720,17 @@ local function QuestLineColor(level)
     return 1, 0.82, 0
 end
 
+local function PinTrackingEnabled()
+    if ns.GetOption("enablePinTracking") == false then return false end
+    if ns.GetOption("trackOnWorldMaps") then return true end
+    local mapID = ns.GetViewedMapID()
+    local info = mapID and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
+    if not info or not info.mapType then return false end
+    local types = Enum and Enum.UIMapType
+    return info.mapType ~= (types and types.World or 1)
+        and info.mapType ~= (types and types.Continent or 2)
+end
+
 local function ShowTooltip(pin, tooltip)
     if not pin.questID and not (pin.quests and pin.quests[1]) then
         return
@@ -811,8 +822,10 @@ local function ShowTooltip(pin, tooltip)
             tooltip:AddLine(("normalized %.3f, %.3f"):format(pin.nx, pin.ny), 0.6, 0.8, 1)
         end
     end
-    tooltip:AddLine("Click to track this quest start.", 1, 1, 1)
-    tooltip:AddLine("Shift-click to hide this marker.", 0.7, 0.7, 0.7)
+    if PinTrackingEnabled() then
+        tooltip:AddLine("Click to track this quest start.", 1, 1, 1)
+        tooltip:AddLine("Shift-click to hide this marker.", 0.7, 0.7, 0.7)
+    end
     tooltip:Show()
 end
 
@@ -965,17 +978,6 @@ local function HidePinQuests(pin)
         pin:Hide()
         print(("|cffffd100Forever Quest Pins:|r Hid %d quest(s). Use Reset hidden quest pins in options or /fqp unhide to restore."):format(count))
     end
-end
-
-local function PinTrackingEnabled()
-    if ns.GetOption("enablePinTracking") == false then return false end
-    if ns.GetOption("trackOnWorldMaps") then return true end
-    local mapID = ns.GetViewedMapID()
-    local info = mapID and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(mapID)
-    if not info or not info.mapType then return false end
-    local types = Enum and Enum.UIMapType
-    return info.mapType ~= (types and types.World or 1)
-        and info.mapType ~= (types and types.Continent or 2)
 end
 
 local function OnPinClick(pin, shiftDown)
@@ -1139,7 +1141,8 @@ local function AcquirePin(parent)
         end
         local pin = WorldMapFrame:AcquirePin("ForeverQuestPinsMapPinTemplate")
         if pin and pin.EnableMouse then
-            pin:EnableMouse(PinTrackingEnabled())
+            pin:EnableMouse(true)
+            pin:SetMouseClickEnabled(PinTrackingEnabled())
         end
         return pin
     end
@@ -1159,7 +1162,10 @@ local function AcquirePin(parent)
         pin._fqpGetCenter = pin.GetCenter
     end
     pin:SetParent(parent)
-    if pin.EnableMouse then pin:EnableMouse(PinTrackingEnabled()) end
+    if pin.EnableMouse then
+        pin:EnableMouse(true)
+        pin:SetMouseClickEnabled(PinTrackingEnabled())
+    end
     pin.placedParent = nil
     if pin.SetIgnoreParentScale then
         pin:SetIgnoreParentScale(false)
