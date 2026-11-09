@@ -9,6 +9,7 @@ ns.defaults = {
     waypointProvider = "blizzard",
     showTrivial = false,
     trivialLevelGap = 9,
+    highLevelGap = 15,
     showNormal = true,
     showClass = true,
     showProfession = true,
@@ -40,6 +41,7 @@ local pinCategoryOptions = {
 }
 local MIRROR_CVAR = "ForeverQuestPinsSettings"
 local TRIVIAL_GAP_MIN, TRIVIAL_GAP_MAX = 3, 15
+local HIGH_LEVEL_GAP_MIN, HIGH_LEVEL_GAP_MAX = 3, 15
 local worldMapDropdownHooked = false
 
 local function NormalizeNumber(key, value)
@@ -52,6 +54,9 @@ local function NormalizeNumber(key, value)
     end
     if key == "trivialLevelGap" then
         return math.max(TRIVIAL_GAP_MIN, math.min(TRIVIAL_GAP_MAX, math.floor(value + 0.5)))
+    end
+    if key == "highLevelGap" then
+        return math.max(HIGH_LEVEL_GAP_MIN, math.min(HIGH_LEVEL_GAP_MAX, math.floor(value + 0.5)))
     end
     return math.max(-5, math.min(5, math.floor(value + 0.5)))
 end
@@ -108,6 +113,14 @@ local function DecodeMirror()
     local trivialLevelGap = tonumber(text:match("trivialLevelGap=(%d+)"))
     if trivialLevelGap and trivialLevelGap >= TRIVIAL_GAP_MIN and trivialLevelGap <= TRIVIAL_GAP_MAX then
         mirror.trivialLevelGap = trivialLevelGap
+    end
+    local highLevelGap = tonumber(text:match("highLevelGap=(%d+)"))
+    if highLevelGap and highLevelGap >= HIGH_LEVEL_GAP_MIN and highLevelGap <= HIGH_LEVEL_GAP_MAX then
+        mirror.highLevelGap = highLevelGap
+    end
+    local legacyHighLevelLimit = text:match("limitHighLevelQuests=([01])")
+    if legacyHighLevelLimit then
+        mirror.limitHighLevelQuests = legacyHighLevelLimit == "1"
     end
     mirror.waypointProvider = text:match("waypointProvider=(%a+)")
     mirror._revision = tonumber(text:match("revision=(%d+)")) or 0
@@ -201,6 +214,7 @@ local function SaveMirror(db)
     parts[#parts + 1] = "autoAcceptLevelOffset=" .. tostring(db.autoAcceptLevelOffset or 1)
     parts[#parts + 1] = "iconScale=" .. tostring(db.iconScale or 100)
     parts[#parts + 1] = "trivialLevelGap=" .. tostring(db.trivialLevelGap or ns.defaults.trivialLevelGap)
+    parts[#parts + 1] = "highLevelGap=" .. tostring(db.highLevelGap or ns.defaults.highLevelGap)
     for i = 1, #keys do
         local key = keys[i]
         parts[#parts + 1] = key .. "=" .. (db[key] and "1" or "0")
@@ -241,6 +255,13 @@ function ns.InitSettings()
         legacyCharacter,
         DecodeMirror()
     )
+
+    if source.limitHighLevelQuests ~= nil then
+        if not source.limitHighLevelQuests then
+            source.highLevelGap = HIGH_LEVEL_GAP_MAX
+        end
+        source.limitHighLevelQuests = nil
+    end
 
     CopySettings(source, account, revision)
     CopyDefaults(ns.defaults, account)
@@ -404,6 +425,8 @@ function ns.SlashCommand(msg)
         print("  /fqp trivial  Toggle low-level/trivial pins (off by default)")
         print(("  /fqp trivial <%d-%d> Hide quests this many levels below you (default %d)"):format(
             TRIVIAL_GAP_MIN, TRIVIAL_GAP_MAX, ns.defaults.trivialLevelGap))
+        print(("  /fqp highlevel <%d-%d> Hide quests this many levels above you (default %d means show all)"):format(
+            HIGH_LEVEL_GAP_MIN, HIGH_LEVEL_GAP_MAX, ns.defaults.highLevelGap))
         print("  /fqp repeatable Toggle repeatable quest pins (on by default)")
         print("  /fqp spawns   Toggle grouped spawn pins (on by default)")
         print("  /fqp seasonal Toggle holiday/seasonal pins (off by default)")
@@ -478,6 +501,14 @@ function ns.SlashCommand(msg)
         if ns.GetOption("showTrivial") then
             Print("Low-level pins are currently shown. Type /fqp trivial to hide them.")
         end
+        return
+    end
+    local highLevelGap = msg:match("^highlevel%s+(%d+)$")
+    if highLevelGap then
+        ns.SetOption("highLevelGap", highLevelGap)
+        local gap = ns.GetOption("highLevelGap")
+        Print(gap == HIGH_LEVEL_GAP_MAX and "Showing quests at every level above you."
+            or ("Hiding quests %d+ levels above you."):format(gap))
         return
     end
     if msg == "repeatable" then
@@ -616,6 +647,7 @@ function ns.PrintSettingsDebug()
         "showWorldMapPins",
         "showTrivial",
         "trivialLevelGap",
+        "highLevelGap",
         "showRepeatable",
         "showSpawnClusters",
         "showSeasonal",
@@ -1046,8 +1078,35 @@ function ns.TryRegisterSettings()
             end)
             optionChecks[#optionChecks + 1] = trivialGap
 
+            local highLevelGap = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
+            highLevelGap:SetPoint("TOPLEFT", trivialGap, "BOTTOMLEFT", 0, -32)
+            highLevelGap:SetSize(240, 16)
+            highLevelGap:SetMinMaxValues(HIGH_LEVEL_GAP_MIN, HIGH_LEVEL_GAP_MAX)
+            highLevelGap:SetValueStep(1)
+            if highLevelGap.Low then highLevelGap.Low:SetText(tostring(HIGH_LEVEL_GAP_MIN)) end
+            if highLevelGap.High then highLevelGap.High:SetText("All") end
+            local highLevelGapLabel = highLevelGap:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+            highLevelGapLabel:SetPoint("BOTTOM", highLevelGap, "TOP", 0, 4)
+            highLevelGap.ApplySaved = function(control)
+                control.syncing = true
+                local gap = ns.GetOption("highLevelGap")
+                control:SetValue(gap)
+                highLevelGapLabel:SetText(gap == HIGH_LEVEL_GAP_MAX
+                    and "Show all quests above you"
+                    or ("Hide quests %d+ levels above you"):format(gap))
+                control.syncing = false
+            end
+            highLevelGap:SetScript("OnValueChanged", function(control, value)
+                if control.syncing or NormalizeNumber("highLevelGap", value) == ns.GetOption("highLevelGap") then
+                    return
+                end
+                ns.SetOption("highLevelGap", value)
+                control:ApplySaved()
+            end)
+            optionChecks[#optionChecks + 1] = highLevelGap
+
             local iconScale = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
-            iconScale:SetPoint("TOPLEFT", trivialGap, "BOTTOMLEFT", 0, -32)
+            iconScale:SetPoint("TOPLEFT", highLevelGap, "BOTTOMLEFT", 0, -32)
             iconScale:SetSize(240, 16)
             iconScale:SetMinMaxValues(50, 150)
             iconScale:SetValueStep(5)

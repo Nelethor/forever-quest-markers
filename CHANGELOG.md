@@ -2,6 +2,11 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 0.4.4 - 2026-11-09
+
+- Add a high-level quest pin filter with a single slider that shows quests at every higher level by default.
+- Preserve the all-levels default when upgrading from the previous checkbox setting.
+
 ## 0.4.3 - 2026-11-09
 
 - Update the QuestieDB Forever artifact to `c5da415cd8ee8fb6b13b7b9b919e94a4cc7d42ae313aaa4da6e9c51f23f16991` (build `c1b50fefb19c064edc436429bef73435d9ff4254`).

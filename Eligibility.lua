@@ -1,4 +1,5 @@
 local ADDON_NAME, ns = ...
+local HIGH_LEVEL_GAP_MAX = 15
 
 local function Call(apiTable, name, ...)
     local fn = apiTable and apiTable[name]
@@ -294,7 +295,9 @@ function ns.OnQuestDataLoad(questID)
     if ns.MapPins and ns.MapPins.OnTitleLoaded then
         ns.MapPins:OnTitleLoaded(questID)
     end
-    if ns.RequestRefresh and not ns.GetOption("showTrivial") then
+    local highLevelGap = ns.GetOption("highLevelGap")
+    local highLevelLimitEnabled = type(highLevelGap) == "number" and highLevelGap < HIGH_LEVEL_GAP_MAX
+    if ns.RequestRefresh and (not ns.GetOption("showTrivial") or highLevelLimitEnabled) then
         ns.RequestRefresh("quest-level")
     end
 end
@@ -977,6 +980,14 @@ function ns.IsQuestAvailable(questID, data)
         local trivial, reliable = IsTrivial(questID, data)
         if reliable and trivial then
             return false, "trivial"
+        end
+    end
+
+    local highLevelGap = ns.GetOption("highLevelGap") or HIGH_LEVEL_GAP_MAX
+    if type(highLevelGap) == "number" and highLevelGap < HIGH_LEVEL_GAP_MAX then
+        local questLevel = ns.GetQuestDifficultyLevel and ns.GetQuestDifficultyLevel(questID)
+        if questLevel and (questLevel - playerLevel) >= highLevelGap then
+            return false, "high-level"
         end
     end
 
