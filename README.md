@@ -24,6 +24,7 @@ TomTom is an optional waypoint provider. The default is **Blizzard Map Pins**.
 - Overlapping starts on the same spot stack into one pin
 - **Shift-click** a pin to hide it (every quest on a stacked pin) for the current character; restore with **Reset hidden quest pins** in settings or `/fqp unhide`
 - Adjustable low-level range: choose how many levels below you a quest must be before its pin is hidden (default 9)
+- Adjustable high-level range: choose how many levels above you quests must be before their pins are hidden (default shows all levels)
 - Optional auto-accept and auto-turn-in when talking to NPCs (off by default; hold **Shift** to skip once)
 - Seasonal / holiday starts (Lunar Festival elders, Darkmoon Faire, …) off by default
 - AQ opening **war effort** commodity pins in Orgrimmar / Ironforge on by default (turn off in settings if the stack is too noisy)
@@ -52,6 +53,7 @@ Escape → Options → AddOns → **Forever Quest Pins**, use the world map's **
 | Track from world and continent maps | Off |
 | Show trivial / low-level pins | Off (hides pins for quests too far below your character) |
 | Low-level range slider | 9 (hide quests 9+ levels below you; adjustable from 3 to 15, inactive while low-level pins are shown) |
+| High-level range slider | All (show quests at every level above you; move left to hide quests 3+ through 14+ levels above you) |
 | Show repeatable quest pins | On |
 | Show spawn clusters | On (group nearby spawns into one pin; off shows one pin per quest) |
 | Show seasonal / holiday quest pins | Off |
@@ -85,6 +87,7 @@ Right-click a quest title in Blizzard’s quest tracker and choose **Copy Wowhea
 | `/fqp on` / `/fqp off` | Enable or disable pins |
 | `/fqp trivial` | Toggle low-level / trivial pins |
 | `/fqp trivial <3-15>` | Hide quests this many levels below you |
+| `/fqp highlevel <3-15>` | Hide quests this many levels above you; 15 shows all |
 | `/fqp hidden` | List quest pins hidden with Shift-click on this character |
 | `/fqp unhide <id\|all>` | Restore one or all hidden quest pins |
 | `/fqp repeatable` | Toggle repeatable quest pins |
