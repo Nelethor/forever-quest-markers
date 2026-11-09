@@ -295,8 +295,9 @@ function ns.OnQuestDataLoad(questID)
     if ns.MapPins and ns.MapPins.OnTitleLoaded then
         ns.MapPins:OnTitleLoaded(questID)
     end
-    local highLevelGap = ns.GetOption("highLevelGap") or HIGH_LEVEL_GAP_MAX
-    if ns.RequestRefresh and (not ns.GetOption("showTrivial") or highLevelGap < HIGH_LEVEL_GAP_MAX) then
+    local highLevelGap = ns.GetOption("highLevelGap")
+    local highLevelLimitEnabled = type(highLevelGap) == "number" and highLevelGap < HIGH_LEVEL_GAP_MAX
+    if ns.RequestRefresh and (not ns.GetOption("showTrivial") or highLevelLimitEnabled) then
         ns.RequestRefresh("quest-level")
     end
 end
@@ -983,7 +984,7 @@ function ns.IsQuestAvailable(questID, data)
     end
 
     local highLevelGap = ns.GetOption("highLevelGap") or HIGH_LEVEL_GAP_MAX
-    if highLevelGap < HIGH_LEVEL_GAP_MAX then
+    if type(highLevelGap) == "number" and highLevelGap < HIGH_LEVEL_GAP_MAX then
         local questLevel = ns.GetQuestDifficultyLevel and ns.GetQuestDifficultyLevel(questID)
         if questLevel and (questLevel - playerLevel) >= highLevelGap then
             return false, "high-level"
