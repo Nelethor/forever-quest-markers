@@ -1,8 +1,8 @@
 {
   "artifact": {
-    "version": "1.0.12-dev.aa1d7e7",
-    "commit": "aa1d7e7294596cf50a6fd0946dfae0d969cb9623",
-    "sha256": "6445dc0a2b1abdcef8724ab7784447844cc9aaacac182b5d2a05aea19bb4152c",
+    "version": "1.0.13-dev.c1b50fe",
+    "commit": "c1b50fefb19c064edc436429bef73435d9ff4254",
+    "sha256": "c5da415cd8ee8fb6b13b7b9b919e94a4cc7d42ae313aaa4da6e9c51f23f16991",
     "ref": "preview",
     "flavor": "Forever",
     "contract_version": 4,
@@ -20,10 +20,10 @@
   "counts": {
     "quests": 5233,
     "quests_with_coords": 4790,
-    "coord_pins": 7304,
+    "coord_pins": 7302,
     "quests_with_turn_ins": 4946,
     "turn_in_npcs": 1686,
-    "turn_in_objects": 197,
+    "turn_in_objects": 195,
     "instance_quests": 678,
     "yearly_quests": 215,
     "repeatable_quests": 739,
@@ -32,7 +32,7 @@
     "quests_with_races": 3498,
     "quests_with_classes": 991,
     "quests_with_skill": 229,
-    "quests_with_prereqs": 2727,
+    "quests_with_prereqs": 2733,
     "quests_with_alt_quests": 459
   },
   "start_gaps": {
@@ -118,7 +118,7 @@
   "turn_ins": {
     "quests_with_turn_ins": 4946,
     "npcs": 1686,
-    "objects": 197,
+    "objects": 195,
     "npc_quests": 4716,
     "object_only_quests": 230
   },
