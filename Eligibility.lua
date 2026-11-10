@@ -240,18 +240,20 @@ function ns.RequestQuestTitle(questID)
     Call(C_QuestLog, "RequestLoadQuestByID", questID)
 end
 
-function ns.GetQuestTitle(questID)
+function ns.GetQuestTitle(questID, skipRequest)
     if not questID then
         return nil
     end
     if titleCache[questID] then
-        return titleCache[questID]
+        return titleCache[questID], true
     end
     local title = ReadQuestTitle(questID)
     if title then
-        return title
+        return title, true
     end
-    ns.RequestQuestTitle(questID)
+    if not skipRequest then
+        ns.RequestQuestTitle(questID)
+    end
     return QuestTitleFromData(questID)
 end
 
@@ -829,13 +831,13 @@ function ns.IsInstanceQuest(questID, data)
         result = true
     elseif IsInstanceTag(correction, nil) then
         result = true
-    elseif tagID ~= nil or tagName ~= nil then
+    elseif tagID ~= nil or (tagName ~= nil and (not GetLocale or GetLocale() == "enUS" or GetLocale() == "enGB")) then
         result = false
     else
         data = data or (ns.Quests and ns.Quests[questID])
         result = data ~= nil and data.isInstanceQuest == true
     end
-    if tagID ~= nil or tagName ~= nil or correction ~= nil then
+    if tagID ~= nil or correction ~= nil or (tagName ~= nil and (not GetLocale or GetLocale() == "enUS" or GetLocale() == "enGB")) then
         instanceQuestCache[questID] = result
     end
     return result

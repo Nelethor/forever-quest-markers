@@ -1591,6 +1591,27 @@ assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
             assert(ns.GetQuestTitle(1) == "Client name")
 
 end
+cases["quest_info_runtime.fallback_title_is_not_client_ready"] = function()
+    dofile("tests/fixtures/quest_info.lua")
+    assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
+    ns.Quests = { [1] = { title = "English title" } }
+    local clientTitle
+    local requests = 0
+    C_QuestLog.RequestLoadQuestByID = function() requests = requests + 1 end
+    C_QuestLog.GetTitleForQuestID = function() return clientTitle end
+    local title, ready = ns.GetQuestTitle(1)
+    assert(title == "English title" and not ready)
+    assert(requests == 1)
+    ns.OnQuestDataLoadFailed(1)
+    for _ = 1, 5 do
+        title, ready = ns.GetQuestTitle(1, true)
+        assert(title == "English title" and not ready)
+    end
+    assert(requests == 1)
+    clientTitle = "Título en español"
+    title, ready = ns.GetQuestTitle(1)
+    assert(title == "Título en español" and ready)
+end
 cases["quest_info_runtime.test_failed_title_load_retries_on_lookup_and_recovers"] = function()
 dofile("tests/fixtures/quest_info.lua")
 assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
@@ -2754,6 +2775,25 @@ cases["map_pins_runtime.tracking_respects_map_level"] = function()
     end
 end
 
+cases["map_pins_runtime.delayed_title_updates_hover_without_request_loop"] = function()
+    setupPinRendering()
+    ns.Quests[101].title = "English title"
+    local clientTitle
+    local requests = 0
+    C_QuestLog.GetTitleForQuestID = function() return clientTitle end
+    C_QuestLog.RequestLoadQuestByID = function() requests = requests + 1 end
+    ns.MapPins:Refresh("title")
+    pin.scripts.OnEnter(pin)
+    assert(tooltipHas("English title"))
+    ns.OnQuestDataLoadFailed(101)
+    local previousRequests = requests
+    for _ = 1, 5 do ns.MapPins:SnapToQuestGivers() end
+    assert(requests == previousRequests)
+    clientTitle = "Título en español"
+    ns.MapPins:SnapToQuestGivers()
+    assert(tooltipHas("Título en español"))
+end
+
 cases["map_pins_runtime.icon_scale_changes_rendered_pin_size"] = function()
     setupPinRendering()
     local acquiredPin = {
@@ -3164,6 +3204,59 @@ cases["map_pins_runtime.distant_spawn_points_cluster_or_collapse_to_one_pin"] = 
     pin.scripts.OnClick(pin, "LeftButton")
     assert(trackedQuestID == 101)
     assert(trackedData.mapID == 1 and trackedData.x == 50 and trackedData.y == 50)
+end
+
+cases["localization.client_locale_and_fallback"] = function()
+    for _, locale in ipairs({ "enUS", "esES", "esMX", "frFR" }) do
+        local localNS = {}
+        GetLocale = function() return locale end
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        if locale == "esES" or locale == "esMX" then
+            assert(localNS.L["Show quest start pins"] == "Mostrar marcadores de inicio de misión")
+            assert(localNS.L["Quest %d (title unavailable)"]:format(123) == "Misión 123 (título no disponible)")
+            local festival = localNS.L["Lunar Festival elders, Darkmoon Faire, and other event quests."]
+            assert(festival:find("Ancestros del Festival Lunar, Feria de la Luna Negra", 1, true))
+            assert(localNS.L["Dungeon / raid quest"]:find(locale == "esES" and "mazmorra" or "calabozo", 1, true))
+            for english, spanish in pairs(localNS.L) do
+                local function formats(value)
+                    local found = {}
+                    for token in value:gmatch("%%[%+%-%.%d]*[a-zA-Z%%]") do found[#found + 1] = token end
+                    return table.concat(found, ",")
+                end
+                assert(formats(english) == formats(spanish), english)
+            end
+        else
+            assert(localNS.L["Show quest start pins"] == "Show quest start pins")
+        end
+        assert(localNS.L["Missing translation"] == "Missing translation")
+    end
+end
+
+cases["quest_info_runtime.localized_tag_uses_static_classification"] = function()
+    dofile("tests/fixtures/quest_info.lua")
+    GetLocale = function() return "esES" end
+    assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
+    C_QuestLog.GetQuestTagInfo = function() return { tagName = "Mazmorra" } end
+    assert(ns.IsInstanceQuest(101, { isInstanceQuest = true }))
+    assert(not ns.IsInstanceQuest(102, {}))
+end
+
+cases["localization.spanish_command_output"] = function()
+    GetLocale = function() return "esMX" end
+    local localNS = {}
+    assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+    assert(loadfile("Config.lua"))("ForeverQuestPins", localNS)
+    local lines = {}
+    print = function(line) lines[#lines + 1] = line end
+    localNS.SlashCommand("help")
+    assert(table.concat(lines, "\n"):find("Comandos:", 1, true))
+    lines = {}
+    localNS.Quests = { [1] = { mapID = 1, x = 10, y = 20 } }
+    localNS.IsQuestAvailable = function() return true, "ok" end
+    localNS.IsQuestFlaggedCompleted = function() return false end
+    localNS.IsOnQuest = function() return false end
+    localNS.PrintQuestWhy(1)
+    assert(table.concat(lines, "\n"):find("Misión 1: se mostraría (ok)", 1, true))
 end
 
 local name = assert(os.getenv("FQP_LUA_CASE"), "FQP_LUA_CASE is required")

@@ -39,6 +39,7 @@ func TestAddonTOCAndPackagingContract(t *testing.T) {
 		"## X-License: GPL-3.0-or-later",
 		"## X-Website: https://github.com/TylerAkins/forever-quest-markers",
 		`Database\QuestTagCorrections.lua`,
+		"Localization.lua",
 	} {
 		if !strings.Contains(toc, required) {
 			t.Errorf("TOC missing %q", required)
@@ -47,6 +48,7 @@ func TestAddonTOCAndPackagingContract(t *testing.T) {
 	for before, after := range map[string]string{
 		"Database\\ForeverQuests.lua":       "Database\\QuestTagCorrections.lua",
 		"Database\\QuestTagCorrections.lua": "Config.lua",
+		"Localization.lua":                  "Config.lua",
 		"Config.lua":                        "HiddenQuests.lua",
 		"HiddenQuests.lua":                  "Eligibility.lua",
 		"Eligibility.lua":                   "Waypoints.lua",

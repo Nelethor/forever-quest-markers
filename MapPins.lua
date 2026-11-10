@@ -1,4 +1,5 @@
 local ADDON_NAME, ns = ...
+local L = ns.L or setmetatable({}, { __index = function(_, key) return key end })
 
 ns.MapPins = ns.MapPins or {}
 local MapPins = ns.MapPins
@@ -755,9 +756,9 @@ local function ShowTooltip(pin, tooltip)
     if primaryText then
         tooltip:SetText(primaryText, pr, pg, pb)
     elseif debugOn then
-        tooltip:SetText("Quest " .. tostring(quests[1].id), 1, 0.82, 0)
+        tooltip:SetText(L["Quest "] .. tostring(quests[1].id), 1, 0.82, 0)
     else
-        tooltip:SetText("Quest", 1, 0.82, 0)
+        tooltip:SetText(L["Quest"], 1, 0.82, 0)
     end
     for i = 2, #quests do
         local extraText, extraLevel = QuestLineText(quests[i].id)
@@ -765,7 +766,7 @@ local function ShowTooltip(pin, tooltip)
             local r, g, b = QuestLineColor(extraLevel)
             tooltip:AddLine(extraText, r, g, b)
         elseif debugOn then
-            tooltip:AddLine("Quest " .. tostring(quests[i].id), 1, 0.82, 0)
+            tooltip:AddLine(L["Quest "] .. tostring(quests[i].id), 1, 0.82, 0)
         end
     end
     local qg = QuestGiverID(quests[1].data or pin.data)
@@ -773,10 +774,10 @@ local function ShowTooltip(pin, tooltip)
     if npcName then
         tooltip:AddLine(npcName, 1, 1, 1)
     elseif debugOn and qg then
-        tooltip:AddLine("Quest giver NPC " .. tostring(qg), 0.8, 0.8, 0.8)
+        tooltip:AddLine(L["Quest giver NPC "] .. tostring(qg), 0.8, 0.8, 0.8)
     end
     if pin.spawnCount and pin.spawnCount > 1 then
-        tooltip:AddLine(("%d possible spawn locations"):format(pin.spawnCount), 0.8, 0.8, 0.8)
+        tooltip:AddLine((L["%d possible spawn locations"]):format(pin.spawnCount), 0.8, 0.8, 0.8)
     end
     if debugOn then
         tooltip:AddLine(" ")
@@ -823,8 +824,8 @@ local function ShowTooltip(pin, tooltip)
         end
     end
     if PinTrackingEnabled() then
-        tooltip:AddLine("Click to track this quest start.", 1, 1, 1)
-        tooltip:AddLine("Shift-click to hide this marker.", 0.7, 0.7, 0.7)
+        tooltip:AddLine(L["Click to track this quest start."], 1, 1, 1)
+        tooltip:AddLine(L["Shift-click to hide this marker."], 0.7, 0.7, 0.7)
     end
     tooltip:Show()
 end
@@ -976,7 +977,7 @@ local function HidePinQuests(pin)
     if count > 0 then
         -- Refresh is deferred in combat; hide now so the marker cannot be clicked again.
         pin:Hide()
-        print(("|cffffd100Forever Quest Pins:|r Hid %d quest(s). Use Reset hidden quest pins in options or /fqp unhide to restore."):format(count))
+        print((L["|cffffd100Forever Quest Pins:|r Hid %d quest(s). Use Reset hidden quest pins in options or /fqp unhide to restore."]):format(count))
     end
 end
 
@@ -1305,7 +1306,8 @@ local function PlacePin(parent, nx, ny, questID, data, reason, live, spawnPoints
     pin.attNy = ny
     pin.live = live and true or nil
     pin.quests = { { id = questID, data = data, reason = reason } }
-    pin.titleReady = ns.GetQuestTitle(questID) and true or nil
+    local _, titleReady = ns.GetQuestTitle(questID)
+    pin.titleReady = titleReady
     pin.anchor = anchor or spawnPoints[1]
     AppendSpawnPoints(pin, spawnPoints)
     SetPinTexture(pin)
@@ -1636,8 +1638,8 @@ function MapPins:SnapToQuestGivers()
             end
         end
         if pin.questID and not pin.titleReady then
-            local title = ns.GetQuestTitle(pin.questID)
-            if title then
+            local _, titleReady = ns.GetQuestTitle(pin.questID, true)
+            if titleReady then
                 pin.titleReady = true
                 MapPins:OnTitleLoaded(pin.questID)
             end

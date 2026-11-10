@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L or setmetatable({}, { __index = function(_, key) return key end })
 
 local registered = false
 local hoveredBlock
@@ -18,7 +19,7 @@ function ns.ShowWowheadQuestURL(questID)
         return false
     end
     StaticPopupDialogs[POPUP] = StaticPopupDialogs[POPUP] or {
-        text = "Copy Wowhead URL\nPress Cmd+C or Ctrl+C to copy the selected link.",
+        text = L["Copy Wowhead URL\nPress Cmd+C or Ctrl+C to copy the selected link."],
         button1 = CLOSE,
         hasEditBox = true,
         editBoxWidth = 350,
@@ -72,7 +73,7 @@ function ns.TryRegisterQuestLinks()
             return
         end
         root:CreateDivider()
-        root:CreateButton("Copy Wowhead URL", function()
+        root:CreateButton(L["Copy Wowhead URL"], function()
             ns.ShowWowheadQuestURL(questID)
         end)
     end)

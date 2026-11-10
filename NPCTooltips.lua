@@ -1,4 +1,5 @@
 local ADDON_NAME, ns = ...
+local L = ns.L or setmetatable({}, { __index = function(_, key) return key end })
 
 ns.NPCTooltips = {}
 local Tooltips = ns.NPCTooltips
@@ -47,7 +48,7 @@ local function BuildStarterIndex()
 end
 
 local function QuestLine(questID)
-    local title = ns.GetQuestTitle(questID) or ("Quest %d (title unavailable)"):format(questID)
+    local title = ns.GetQuestTitle(questID) or (L["Quest %d (title unavailable)"]):format(questID)
     local level = ns.GetQuestDifficultyLevel and ns.GetQuestDifficultyLevel(questID)
     if level then
         return ("[%d] %s"):format(level, title), level

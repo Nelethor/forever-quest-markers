@@ -18,6 +18,7 @@
 Database\Metadata.lua
 Database\ForeverQuests.lua
 Database\QuestTagCorrections.lua
+Localization.lua
 Config.lua
 HiddenQuests.lua
 WarEffort.lua
