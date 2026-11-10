@@ -1,4 +1,5 @@
 local ADDON_NAME, ns = ...
+local L = ns.L or setmetatable({}, { __index = function(_, key) return key end })
 
 local nativeQuestID
 local selectedQuestID
@@ -45,7 +46,7 @@ end
 local function SetTomTomPoint(questID, mapID, x, y)
     if not TomTom or type(TomTom.AddWaypoint) ~= "function"
         or type(TomTom.RemoveWaypoint) ~= "function" then
-        return false, "TomTom is not loaded. Choose Blizzard Map Pins or enable TomTom."
+        return false, L["TomTom is not loaded. Choose Blizzard Map Pins or enable TomTom."]
     end
     if destination and destination.mapID == mapID and destination.x == x and destination.y == y then
         return true
@@ -57,7 +58,7 @@ local function SetTomTomPoint(questID, mapID, x, y)
     end
     tomtomOwner = TomTom
     tomtomUID = TomTom:AddWaypoint(mapID, x, y, {
-        title = ns.GetQuestTitle(questID) or ("Quest " .. questID),
+        title = ns.GetQuestTitle(questID) or (L["Quest "] .. questID),
         from = ADDON_NAME,
         persistent = false,
         minimap = true,
@@ -65,7 +66,7 @@ local function SetTomTomPoint(questID, mapID, x, y)
         crazy = true,
     })
     if not tomtomUID then
-        return false, "TomTom could not create this waypoint."
+        return false, L["TomTom could not create this waypoint."]
     end
     destination = { mapID = mapID, x = x, y = y }
     return true
@@ -81,7 +82,7 @@ function ns.TrackQuest(questID, data)
     if onQuest then
         if ns.GetOption("waypointProvider") == "blizzard" then
             if not C_SuperTrack or type(C_SuperTrack.SetSuperTrackedQuestID) ~= "function" then
-                Report("Blizzard quest tracking is unavailable on this client.")
+                Report(L["Blizzard quest tracking is unavailable on this client."])
                 return false
             end
             C_SuperTrack.SetSuperTrackedQuestID(questID)
@@ -99,7 +100,7 @@ function ns.TrackQuest(questID, data)
         end
     end
     if not ValidPoint(mapID, x, y) then
-        Report("No quest location is available yet.")
+        Report(L["No quest location is available yet."])
         return false
     end
     if ns.GetOption("waypointProvider") == "tomtom" then
@@ -111,11 +112,11 @@ function ns.TrackQuest(questID, data)
             or type(C_Map.ClearUserWaypoint) ~= "function"
             or type(C_Map.CanSetUserWaypointOnMap) ~= "function"
             or not UiMapPoint or type(UiMapPoint.CreateFromCoordinates) ~= "function" then
-            Report("Blizzard Map Pins are unavailable on this client. TomTom can be selected in options.")
+            Report(L["Blizzard Map Pins are unavailable on this client. TomTom can be selected in options."])
             return false
         end
         if not C_Map.CanSetUserWaypointOnMap(mapID) then
-            Report("Blizzard does not allow a map pin in this zone.")
+            Report(L["Blizzard does not allow a map pin in this zone."])
             return false
         end
         startPoint = UiMapPoint.CreateFromCoordinates(mapID, x, y)

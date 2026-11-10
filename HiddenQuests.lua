@@ -1,4 +1,5 @@
 local ADDON_NAME, ns = ...
+local L = ns.L or setmetatable({}, { __index = function(_, key) return key end })
 
 -- Per-character hidden quest pins live in the account store
 -- (ForeverQuestPinsDB.hiddenQuests["Name-Realm"]) because Forever can drop
@@ -125,22 +126,22 @@ end
 
 function ns.ResetHiddenQuestPins()
     local count = ns.UnhideAllQuests()
-    Print(("Restored %d hidden quest pin(s)."):format(count))
+    Print((L["Restored %d hidden quest pin(s)."]):format(count))
     return count
 end
 
 function ns.PrintHiddenQuests()
     local ids = ns.HiddenQuestIDs()
     if #ids == 0 then
-        Print("No hidden quest pins on this character.")
+        Print(L["No hidden quest pins on this character."])
         return
     end
-    Print(("Hidden quest pins on this character (%d):"):format(#ids))
+    Print((L["Hidden quest pins on this character (%d):"]):format(#ids))
     for i = 1, #ids do
         local title = ns.GetQuestTitle and ns.GetQuestTitle(ids[i])
         print(("  %d %s"):format(ids[i], title or ""))
     end
-    print("  /fqp unhide <id> or /fqp unhide all to restore")
+    print(L["  /fqp unhide <id> or /fqp unhide all to restore"])
 end
 
 function ns.UnhideFromSlash(arg)
@@ -150,12 +151,12 @@ function ns.UnhideFromSlash(arg)
     end
     local questID = tonumber(arg)
     if not questID then
-        Print("Usage: /fqp unhide <id> or /fqp unhide all")
+        Print(L["Usage: /fqp unhide <id> or /fqp unhide all"])
         return
     end
     if ns.UnhideQuest(questID) then
-        Print(("Restored quest %d."):format(questID))
+        Print((L["Restored quest %d."]):format(questID))
     else
-        Print(("Quest %d is not hidden on this character."):format(questID))
+        Print((L["Quest %d is not hidden on this character."]):format(questID))
     end
 end
