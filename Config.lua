@@ -17,6 +17,7 @@ ns.defaults = {
     showDungeon = true,
     showRepeatable = true,
     showSpawnClusters = true,
+    highlightNewQuests = true,
     showSeasonal = false,
     showWarEffort = false,
     autoAccept = false,
@@ -651,6 +652,7 @@ function ns.PrintSettingsDebug()
         "highLevelGap",
         "showRepeatable",
         "showSpawnClusters",
+        "highlightNewQuests",
         "showSeasonal",
         "showWarEffort",
         "autoAccept",
@@ -1043,13 +1045,21 @@ function ns.TryRegisterSettings()
             )
             spawnClusters:SetPoint("TOPLEFT", repeatable, "BOTTOMLEFT", 0, 0)
 
+            local highlightNew = CreateOptionCheckbox(
+                self,
+                "highlightNewQuests",
+                L["Highlight quests new in WoW Forever"],
+                L["Yellow start markers for quests that were not in original Classic get the Forever yellow-to-blue gradient."]
+            )
+            highlightNew:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, 0)
+
             local trivial = CreateOptionCheckbox(
                 self,
                 "showTrivial",
                 L["Show low-level quests"],
                 L["When off, hides pins for quests too far below your level. Set how far with the slider below."]
             )
-            trivial:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, 0)
+            trivial:SetPoint("TOPLEFT", highlightNew, "BOTTOMLEFT", 0, 0)
 
             local trivialGap = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
             trivialGap:SetPoint("TOPLEFT", trivial, "BOTTOMLEFT", 8, -24)
