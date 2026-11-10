@@ -2,6 +2,11 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 0.4.5 - 2026-11-10
+
+- Add Spanish localization for Spain and Latin American Spanish clients, selected from the client locale.
+- Use regional dungeon terminology and localized game quest and NPC names.
+
 ## 0.4.4 - 2026-11-09
 
 - Add a high-level quest pin filter with a single slider that shows quests at every higher level by default.
