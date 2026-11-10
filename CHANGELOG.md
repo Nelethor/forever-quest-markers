@@ -2,10 +2,15 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
-## 0.4.5 - 2026-11-10
+## 0.4.6 - 2026-11-10
 
 - Add Spanish localization for Spain and Latin American Spanish clients, selected from the client locale.
 - Use regional dungeon terminology and localized game quest and NPC names.
+
+## 0.4.5 - 2026-11-10
+
+- Update the QuestieDB Forever artifact to `de1b8277b0bbdea6f31f25467a84d1e9d77d029d3f61a8cb396d315f0d536996` (build `c0ce0c97ee449295ff1a8356f815a713ff9e463c`).
+- Ship 5239 quests with 7307 coordinate pins (678 static instance quests, 215 yearly quests).
 
 ## 0.4.4 - 2026-11-09
 
