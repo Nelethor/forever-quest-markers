@@ -55,6 +55,16 @@ func TestCompileCopiesOnlyPackageFilesAndDryRunPreservesOutput(t *testing.T) {
 	if strings.Contains(string(toc), "@project-version@") {
 		t.Fatal("project version token was not replaced")
 	}
+	for _, line := range strings.Split(string(toc), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		path := filepath.Join(output, filepath.FromSlash(strings.ReplaceAll(line, `\`, "/")))
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("TOC file missing from package %s: %v", line, err)
+		}
+	}
 	if len(files) != len(listed) {
 		t.Fatalf("dry-run listed %d files, build copied %d", len(listed), len(files))
 	}

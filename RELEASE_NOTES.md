@@ -1,4 +1,4 @@
-## 0.4.6 - 2026-11-10
+## 1.0.0 - 2026-11-11
 
-- Add Spanish localization for Spain and Latin American Spanish clients.
-- Update the QuestieDB Forever database to include 5239 quests and 7307 coordinate pins.
+- Add German, French, Brazilian Portuguese, Simplified and Traditional Chinese, Korean, Italian, and Russian localization based on the game client language.
+- Include localization in locally compiled add-on packages.
