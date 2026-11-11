@@ -3207,7 +3207,12 @@ cases["map_pins_runtime.distant_spawn_points_cluster_or_collapse_to_one_pin"] = 
 end
 
 cases["localization.client_locale_and_fallback"] = function()
-    for _, locale in ipairs({ "enUS", "esES", "esMX", "frFR" }) do
+    local spanishKeys
+    local commands = {
+        frFR = "Commandes", ptBR = "Comandos", zhCN = "命令", zhTW = "命令",
+        koKR = "명령", itIT = "Comandi", ruRU = "Команды",
+    }
+    for _, locale in ipairs({ "enUS", "esES", "esMX", "deDE", "frFR", "ptBR", "zhCN", "zhTW", "koKR", "itIT", "ruRU", "unknown" }) do
         local localNS = {}
         GetLocale = function() return locale end
         assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
@@ -3217,19 +3222,156 @@ cases["localization.client_locale_and_fallback"] = function()
             local festival = localNS.L["Lunar Festival elders, Darkmoon Faire, and other event quests."]
             assert(festival:find("Ancestros del Festival Lunar, Feria de la Luna Negra", 1, true))
             assert(localNS.L["Dungeon / raid quest"]:find(locale == "esES" and "mazmorra" or "calabozo", 1, true))
-            for english, spanish in pairs(localNS.L) do
+        elseif locale == "deDE" then
+            assert(localNS.L["Show quest start pins"] == "Queststart-Markierungen anzeigen")
+            assert(localNS.L["Quest %d (title unavailable)"]:format(123) == "Quest 123 (Titel nicht verfügbar)")
+            assert(localNS.L["Dungeon / raid quest"] == "Dungeon- / Schlachtzugsquest")
+        elseif locale == "enUS" or locale == "unknown" then
+            assert(localNS.L["Show quest start pins"] == "Show quest start pins")
+        end
+        if locale == "esES" then spanishKeys = localNS.L end
+        if locale ~= "enUS" and locale ~= "unknown" then
+            if commands[locale] then
+                assert(localNS.L["Commands:"]:find(commands[locale], 1, true), locale)
+            end
+            for key in pairs(spanishKeys) do
+                assert(rawget(localNS.L, key), "missing " .. locale .. " translation: " .. key)
+            end
+            for english, translated in pairs(localNS.L) do
                 local function formats(value)
                     local found = {}
                     for token in value:gmatch("%%[%+%-%.%d]*[a-zA-Z%%]") do found[#found + 1] = token end
                     return table.concat(found, ",")
                 end
-                assert(formats(english) == formats(spanish), english)
+                assert(formats(english) == formats(translated), english)
+                if english:find("/fqp", 1, true) then
+                    assert(translated:find("/fqp", 1, true), locale .. ": " .. english)
+                end
+                local command = english:match("^%s+/fqp%s+([%a]+)")
+                if command then
+                    assert(translated:find("/fqp " .. command, 1, true), locale .. ": " .. english)
+                end
             end
-        else
-            assert(localNS.L["Show quest start pins"] == "Show quest start pins")
         end
         assert(localNS.L["Missing translation"] == "Missing translation")
     end
+end
+
+cases["localization.quest_categories_and_help"] = function()
+    local expected = {
+        zhCN = { "职业任务", "专业任务", "主城" },
+        zhTW = { "職業任務", "專業任務", "主城" },
+        koKR = { "직업 퀘스트", "전문 기술 퀘스트", "대도시" },
+    }
+    for locale, values in pairs(expected) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        assert(localNS.L["Class quest"] == values[1], locale)
+        assert(localNS.L["Profession quest"] == values[2], locale)
+        assert(localNS.L["  /fqp wareffort Toggle AQ war effort pins in capitals (off by default)"]:find(values[3], 1, true), locale)
+    end
+    for locale, city in pairs({ frFR = "capitales", ptBR = "capitais", itIT = "capitali", ruRU = "столицах" }) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        assert(localNS.L["  /fqp wareffort Toggle AQ war effort pins in capitals (off by default)"]:find(city, 1, true), locale)
+    end
+    for locale, skip in pairs({ frFR = "ignorer", itIT = "ignorare" }) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        assert(localNS.L["Accept quests automatically when you talk to an NPC. Hold Shift to skip."]:find(skip, 1, true), locale)
+        assert(localNS.L["Turn in completed quests automatically. Does not pick when there are multiple rewards. Hold Shift to skip."]:find(skip, 1, true), locale)
+    end
+end
+
+cases["localization.map_legend_and_help"] = function()
+    for _, locale in ipairs({ "frFR", "ptBR", "zhCN", "zhTW", "koKR", "itIT", "ruRU" }) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        local questLabels = { ptBR = "Missão", zhCN = "任务", zhTW = "任務", koKR = "퀘스트", itIT = "Missione" }
+        if questLabels[locale] then
+            assert(localNS.L["Quest"] == questLabels[locale], locale)
+            assert(localNS.L["Quest "] == questLabels[locale] .. " ", locale)
+        end
+        if locale == "frFR" then
+            assert(localNS.L["Show AQ war effort pins"] == "Afficher les marqueurs de l’effort de guerre d’AQ")
+            assert(localNS.L["Would pin on map "] == "Serait affiché sur la carte ")
+            assert(localNS.L["List quests you can accept or turn in from this NPC (accept eligibility matches start pins; turn-ins require an active, complete quest)."]:find("mêmes conditions", 1, true))
+        elseif locale == "koKR" then
+            assert(localNS.L["Ordinary quest starts without repeatable, seasonal, AQ, class, profession, or dungeon / raid categories."]:find("전문 기술", 1, true))
+        elseif locale == "zhCN" then
+            assert(localNS.L["Ordinary quest starts without repeatable, seasonal, AQ, class, profession, or dungeon / raid categories."]:find("职业、专业", 1, true))
+        elseif locale == "zhTW" then
+            assert(localNS.L["Ordinary quest starts without repeatable, seasonal, AQ, class, profession, or dungeon / raid categories."]:find("職業、專業", 1, true))
+        end
+    end
+end
+
+cases["localization.level_gap_help"] = function()
+    local expected = {
+        ptBR = { "número informado", "abaixo", "acima" },
+        ruRU = { "указанное число", "ниже", "выше" },
+    }
+    for locale, words in pairs(expected) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        assert(loadfile("Config.lua"))("ForeverQuestPins", localNS)
+        local lines = {}
+        print = function(line) lines[#lines + 1] = line end
+        localNS.SlashCommand("help")
+        local text = table.concat(lines, "\n")
+        for _, word in ipairs(words) do
+            assert(text:find(word, 1, true), locale .. ": " .. word)
+        end
+    end
+end
+
+cases["localization.turnin_toggle_output"] = function()
+    local expected = {
+        frFR = { "Remettre les quêtes automatiquement", "activé", "désactivé" },
+        ptBR = { "Entregar missões automaticamente", "ativado", "desativado" },
+        zhCN = { "自动交付任务", "已开启", "已关闭" },
+        zhTW = { "自動回報任務", "已開啟", "已關閉" },
+        koKR = { "퀘스트 자동 제출", "켜짐", "꺼짐" },
+        itIT = { "Consegna automaticamente le missioni", "attivato", "disattivato" },
+        ruRU = { "Автоматическая сдача заданий", "включено", "выключено" },
+    }
+    for locale, values in pairs(expected) do
+        GetLocale = function() return locale end
+        local localNS = {}
+        assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+        assert(loadfile("Config.lua"))("ForeverQuestPins", localNS)
+        local value, lines = false, {}
+        localNS.GetOption = function() return value end
+        localNS.SetOption = function(_, newValue) value = newValue end
+        print = function(line) lines[#lines + 1] = line end
+        localNS.SlashCommand("turnin")
+        assert(lines[1]:find(values[1] .. ": " .. values[2], 1, true), locale .. ": " .. lines[1])
+        localNS.SlashCommand("turnin")
+        assert(lines[2]:find(values[1] .. ": " .. values[3], 1, true), locale .. ": " .. lines[2])
+    end
+end
+
+cases["localization.german_command_output"] = function()
+    GetLocale = function() return "deDE" end
+    local localNS = {}
+    assert(loadfile("Localization.lua"))("ForeverQuestPins", localNS)
+    assert(loadfile("Config.lua"))("ForeverQuestPins", localNS)
+    local lines = {}
+    print = function(line) lines[#lines + 1] = line end
+    localNS.SlashCommand("help")
+    assert(table.concat(lines, "\n"):find("Befehle:", 1, true))
+    lines = {}
+    localNS.Quests = { [1] = { mapID = 1, x = 10, y = 20 } }
+    localNS.IsQuestAvailable = function() return true, "ok" end
+    localNS.IsQuestFlaggedCompleted = function() return false end
+    localNS.IsOnQuest = function() return false end
+    localNS.PrintQuestWhy(1)
+    assert(table.concat(lines, "\n"):find("Quest 1: würde angezeigt (ok)", 1, true))
 end
 
 cases["quest_info_runtime.localized_tag_uses_static_classification"] = function()
