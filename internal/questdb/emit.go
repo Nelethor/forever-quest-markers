@@ -30,7 +30,7 @@ type Metadata struct {
 }
 
 // EmitDatabase writes the generated addon database files.
-func EmitDatabase(outputDir string, records []Record, meta Metadata, instanceTags map[int]int) error {
+func EmitDatabase(outputDir string, records []Record, meta Metadata, instanceTags map[int]int, schedule *EventSchedule) error {
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return err
 	}
@@ -40,7 +40,18 @@ func EmitDatabase(outputDir string, records []Record, meta Metadata, instanceTag
 	if err := writeFile(filepath.Join(outputDir, "QuestTagCorrections.lua"), renderTagCorrections(instanceTags, meta)); err != nil {
 		return err
 	}
+	if err := EmitEventPolicy(outputDir, schedule, meta); err != nil {
+		return err
+	}
 	return writeFile(filepath.Join(outputDir, "Metadata.lua"), renderMetadata(meta))
+}
+
+// EmitEventPolicy writes the generated holiday and war-effort policy file.
+func EmitEventPolicy(outputDir string, schedule *EventSchedule, meta Metadata) error {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return err
+	}
+	return writeFile(filepath.Join(outputDir, "EventPolicy.lua"), renderEventPolicy(schedule, meta))
 }
 
 // WriteReport writes the deterministic build report.
@@ -198,9 +209,6 @@ func renderRecord(record Record) string {
 	}
 	if record.IsYearly {
 		add("isYearly", "true")
-	}
-	if record.Event != 0 {
-		add("event", strconv.Itoa(record.Event))
 	}
 	if record.Repeatable {
 		add("repeatable", "true")

@@ -26,10 +26,10 @@ TomTom is an optional waypoint provider. The default is **Blizzard Map Pins**.
 - Adjustable low-level range: choose how many levels below you a quest must be before its pin is hidden (default 9)
 - Adjustable high-level range: choose how many levels above you quests must be before their pins are hidden (default shows all levels)
 - Optional auto-accept and auto-turn-in when talking to NPCs (off by default; hold **Shift** to skip once)
-- Seasonal / holiday starts (Lunar Festival elders, Darkmoon Faire, …) off by default
-- AQ opening **war effort** commodity pins in Orgrimmar / Ironforge on by default (turn off in settings if the stack is too noisy)
+- Seasonal / holiday starts (Lunar Festival elders, …) off by default; when on, pins appear only while the event is live
+- AQ opening **war effort** commodity pins in Orgrimmar / Ironforge off by default; when on, they appear after a war effort quest is offered or in your log, or with the always-show override
 
-Quest coordinates, quest-giver IDs, turn-in targets, and restrictions come from [QuestieDB](https://github.com/Questie/QuestieDB) Forever data, with holiday and instance-tag policy from [Questie](https://github.com/Questie/Questie). The Go tool `go run ./cmd/fqp build-db` generates the addon database. Quests without a usable spawn stay in the database for tooltips and prerequisites but may not get a map pin.
+Quest coordinates, quest-giver IDs, turn-in targets, and restrictions come from [QuestieDB](https://github.com/Questie/QuestieDB) Forever data, with holiday, event, and instance-tag policy from [Questie](https://github.com/Questie/Questie). The Go tool `go run ./cmd/fqp build-db` generates the addon database. Quests without a usable spawn stay in the database for tooltips and prerequisites but may not get a map pin.
 
 ## Install
 
@@ -56,12 +56,13 @@ Escape → Options → AddOns → **Forever Quest Pins**, use the world map's **
 | High-level range slider | All (show quests at every level above you; move left to hide quests 3+ through 14+ levels above you) |
 | Show repeatable quest pins | On |
 | Show spawn clusters | On (group nearby spawns into one pin; off shows one pin per quest) |
-| Show seasonal / holiday quest pins | Off |
+| Show seasonal / holiday quest pins | Off (when on, pins appear only while the event is live; Darkmoon Faire stays hidden) |
 | Show normal quest start pins | On |
 | Show class quest pins | On |
 | Show profession quest pins | On |
 | Show dungeon / raid quest pins | On |
-| Show AQ war effort pins | Off (capital turn-ins: Senior Sergeants, signets, \"Needs Your Help\") |
+| Show AQ war effort pins | Off (capital turn-ins; appears after a war effort quest is offered or in your log) |
+| Always show AQ war effort pins | Off (skip the phase confirmation check) |
 | Show in-world destination marker | Uses Blizzard’s current shared navigation setting |
 | Waypoint provider | Blizzard Map Pins (TomTom optional) |
 | Icon Scale | 100% (adjustable from 50% to 150%) |
@@ -94,6 +95,7 @@ Right-click a quest title in Blizzard’s quest tracker and choose **Copy Wowhea
 | `/fqp spawns` | Toggle grouped spawn pins |
 | `/fqp seasonal` | Toggle holiday / seasonal pins |
 | `/fqp wareffort` | Toggle AQ war effort pins in capitals |
+| `/fqp wareffort always` | Always show AQ war effort pins, skipping the phase confirmation |
 | `/fqp accept` | Toggle auto-accept |
 | `/fqp turnin` | Toggle auto-turn-in |
 | `/fqp npctooltip` | Toggle NPC quest accept and ready turn-in tooltips |
@@ -118,7 +120,8 @@ Forever’s quest data is still moving. Missing pins are often a gap in the publ
 - Missing quest starters are learned for the current session when an NPC offers them through gossip or quest details. Unavailable titles appear as `Quest <ID> (title unavailable)` until loaded.
 - **Forever-only quests** missing from the export will not pin until the export (or a gossip offer we already saw this session) knows them
 - **Item-started** and **object-started** quests stay in the database. They get a start pin only when the export has a usable spawn (drop NPC, chest, or world object). Pure item starts with no spawn stay tooltip-only.
-- **Holiday** starts stay hidden unless seasonal pins are on
+- **Holiday** starts stay hidden unless seasonal pins are on, and then they appear only while the event window is live. Darkmoon Faire stays hidden on Forever.
+- **AQ war effort** pins need a confirmed phase: a war effort quest offered or in your log this session, or the always-show override. No Forever API reports the realm phase.
 - **Continent** view needs `C_Map.GetMapRectOnMap`; without it, pins only appear on the quest’s own zone map
 - **Patrols** (for example Morin Cloudstalker) use the exported static points, plus a second pin at a known path end, until the NPC is visible and near those points
 - Reputation requirements are not copied into the addon database, so they do not hide pins

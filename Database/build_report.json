@@ -1,8 +1,8 @@
 {
   "artifact": {
-    "version": "1.0.14-dev.d57637f",
-    "commit": "d57637f490c9dfcdbbc967dab47a8b0d8fe1b3cc",
-    "sha256": "0dc5b2e793defd9145b5d75cda35fe101980f2eb5ff0c648fcf29a9a97b9b65a",
+    "version": "1.0.14-dev.7f629bf",
+    "commit": "7f629bf2f41c3bfe40bb8d5cec3b5691bb1d4dca",
+    "sha256": "f0442af288a63baeed64a8d117eb82a2364d0f7154312788dd60d27bf73e7b5b",
     "ref": "preview",
     "flavor": "Forever",
     "contract_version": 4,
@@ -14,32 +14,37 @@
     "holiday_entries": 1000,
     "holiday_quests": 1000,
     "hidden_entries": 0,
+    "event_windows": 6,
+    "event_overrides": 11,
+    "disabled_events": 1,
+    "war_effort_quests": 111,
+    "lunar_years": 10,
     "tag_entries": 2557,
     "instance_quests": 1419
   },
   "counts": {
-    "quests": 5682,
-    "quests_with_coords": 4930,
-    "coord_pins": 7674,
-    "quests_with_turn_ins": 5104,
-    "turn_in_npcs": 1742,
-    "turn_in_objects": 198,
+    "quests": 5768,
+    "quests_with_coords": 5265,
+    "coord_pins": 9775,
+    "quests_with_turn_ins": 5460,
+    "turn_in_npcs": 1842,
+    "turn_in_objects": 202,
     "instance_quests": 678,
     "yearly_quests": 220,
     "repeatable_quests": 742,
     "monthly_quests": 0,
     "breadcrumb_quests": 216,
-    "quests_with_races": 3915,
+    "quests_with_races": 3925,
     "quests_with_classes": 1034,
     "quests_with_skill": 230,
     "quests_with_prereqs": 2752,
     "quests_with_alt_quests": 459
   },
   "start_gaps": {
-    "no_starter": 465,
-    "item_no_drop_source": 250,
+    "no_starter": 234,
+    "item_no_drop_source": 249,
     "item_drop_no_spawn": 11,
-    "starter_no_spawn": 26,
+    "starter_no_spawn": 9,
     "unmapped_zone": 0,
     "no_dungeon_entrance": 0,
     "missing_entity": 0,
@@ -111,27 +116,16 @@
       9310,
       79963,
       79970,
-      81762,
-      84318,
-      84330,
-      86611,
-      92812,
-      93443,
-      94841,
-      94857,
-      94895,
-      94975,
-      94992,
-      95254,
-      95682
+      95682,
+      98093
     ]
   },
   "turn_ins": {
-    "quests_with_turn_ins": 5104,
-    "npcs": 1742,
-    "objects": 198,
-    "npc_quests": 4871,
-    "object_only_quests": 233
+    "quests_with_turn_ins": 5460,
+    "npcs": 1842,
+    "objects": 202,
+    "npc_quests": 5223,
+    "object_only_quests": 237
   },
   "policy_coverage": {
     "yearly_marked": 220,
@@ -140,7 +134,9 @@
   "conflicts": [],
   "deviations": [
     "Era blacklist/quest-exclusion policy is not applied; applying it would hide 235 current baseline quests (191 true, 44 HIDE_ON_MAP; 231 otherwise pinnable). Season, class, and prerequisite availability are decided at runtime.",
-    "Questie holiday data has no event IDs; isYearly is populated and event is not.",
-    "Questie `breadcrumbs` lists incoming breadcrumb routes, so it feeds sourceQuestSingle; only `breadcrumbForQuestId` sets isBreadcrumb."
+    "Questie holiday quest files name their event instead of using event IDs; isYearly marks the record and EventPolicy.lua carries the event name.",
+    "Questie `breadcrumbs` lists incoming breadcrumb routes, so it feeds sourceQuestSingle; only `breadcrumbForQuestId` sets isBreadcrumb.",
+    "Darkmoon Faire is disabled because Questie has no Forever faire window and most of its records mix Mulgore and Elwynn coordinates.",
+    "Lunar Festival windows are pinned to Questie years 2019 through 2028; later years hide with lunar-year-unknown."
   ]
 }

@@ -2,6 +2,17 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 1.0.1 - 2026-11-11
+
+- Update the QuestieDB Forever artifact to `f0442af288a63baeed64a8d117eb82a2364d0f7154312788dd60d27bf73e7b5b` (build `7f629bf2f41c3bfe40bb8d5cec3b5691bb1d4dca`).
+- Ship 5768 quests with 9775 coordinate pins (678 static instance quests, 220 yearly quests).
+- Show seasonal and holiday pins only while their Questie event window is live instead of for the whole year.
+- Follow per-quest event windows, such as the narrower Winter Veil presents window.
+- Classify AQ war effort pins from Questie's list and wait for a war effort quest to be offered or appear in the quest log.
+- Add `/fqp wareffort always` to show AQ war effort pins without the phase confirmation.
+- Report event windows, overrides, disabled events, and AQ phase details in `/fqp why`.
+- Keep Darkmoon Faire hidden on Forever and document the limitation.
+
 ## 1.0.0 - 2026-11-11
 
 - Add German, French, Brazilian Portuguese, Simplified and Traditional Chinese, Korean, Italian, and Russian localization based on the game client language.

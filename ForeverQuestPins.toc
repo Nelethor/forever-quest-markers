@@ -18,10 +18,12 @@
 Database\Metadata.lua
 Database\ForeverQuests.lua
 Database\QuestTagCorrections.lua
+Database\EventPolicy.lua
 Localization.lua
 Config.lua
 HiddenQuests.lua
 WarEffort.lua
+Events.lua
 Eligibility.lua
 NPCTooltips.lua
 Waypoints.lua

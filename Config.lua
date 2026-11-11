@@ -19,6 +19,7 @@ ns.defaults = {
     showSpawnClusters = true,
     showSeasonal = false,
     showWarEffort = false,
+    showWarEffortAlways = false,
     autoAccept = false,
     autoAcceptRangeEnabled = false,
     autoAcceptLevelOffset = 1,
@@ -381,6 +382,7 @@ function ns.TryRegisterWorldMapDropdown()
         { "showProfession", L["Profession quest"] },
         { "showSeasonal", L["Seasonal / holiday quest"] },
         { "showWarEffort", L["AQ war effort"] },
+        { "showWarEffortAlways", L["Always show AQ war effort pins"] },
         { "showRepeatable", L["Repeatable quest"] },
         { "enablePinTracking", L["Click pins to track quest starts"] },
     }
@@ -432,6 +434,7 @@ function ns.SlashCommand(msg)
         print(L["  /fqp spawns   Toggle grouped spawn pins (on by default)"])
         print(L["  /fqp seasonal Toggle holiday/seasonal pins (off by default)"])
         print(L["  /fqp wareffort Toggle AQ war effort pins in capitals (off by default)"])
+        print(L["  /fqp wareffort always Always show AQ war effort pins"])
         print(L["  /fqp accept   Toggle auto-accept quests"])
         print(L["  /fqp turnin   Toggle auto-turn in quests"])
         print(L["  /fqp npctooltip Toggle quest accept and ready turn-in lines on NPC mouseover"])
@@ -522,6 +525,10 @@ function ns.SlashCommand(msg)
     end
     if msg == "seasonal" then
         ToggleFlag("showSeasonal", L["Show seasonal/holiday pins"])
+        return
+    end
+    if msg == "wareffort always" or msg == "war always" then
+        ToggleFlag("showWarEffortAlways", L["Always show AQ war effort pins"])
         return
     end
     if msg == "wareffort" or msg == "war" then
@@ -653,6 +660,7 @@ function ns.PrintSettingsDebug()
         "showSpawnClusters",
         "showSeasonal",
         "showWarEffort",
+        "showWarEffortAlways",
         "autoAccept",
         "autoAcceptRangeEnabled",
         "autoAcceptLevelOffset",
@@ -674,6 +682,18 @@ function ns.PrintSettingsDebug()
     if ns.settingsMode then
         print("  options UI: " .. tostring(ns.settingsMode))
     end
+end
+
+local function FormatEventWindow(window)
+    local startTuple = window and window[1]
+    local endTuple = window and window[2]
+    if not startTuple or not endTuple then
+        return "?"
+    end
+    return ("%02d/%02d %02d:%02d-%02d/%02d %02d:%02d"):format(
+        startTuple[2], startTuple[1], startTuple[3], startTuple[4],
+        endTuple[2], endTuple[1], endTuple[3], endTuple[4]
+    )
 end
 
 function ns.PrintQuestWhy(questID)
@@ -710,6 +730,40 @@ function ns.PrintQuestWhy(questID)
         tostring(data.faction or "-"),
         tostring(data.minLevel or "-")
     ))
+    if ns.GetEventState then
+        local eventActive, eventReason, eventDetail = ns.GetEventState(questID)
+        if eventDetail and eventDetail.event then
+            print(("  event %s: %s (%s)"):format(
+                eventDetail.event,
+                eventActive and "live" or "not live",
+                tostring(eventReason)
+            ))
+            if eventDetail.window then
+                print("  window " .. FormatEventWindow(eventDetail.window))
+            end
+            if eventDetail.override then
+                print("  override " .. FormatEventWindow(eventDetail.override))
+            end
+            if eventDetail.now then
+                print(("  server time %04d-%02d-%02d %02d:%02d from %s"):format(
+                    eventDetail.now.year or 0,
+                    eventDetail.now.month,
+                    eventDetail.now.day,
+                    eventDetail.now.hour,
+                    eventDetail.now.minute,
+                    tostring(eventDetail.now.source)
+                ))
+            end
+        end
+    end
+    if ns.IsWarEffortQuest and ns.IsWarEffortQuest(questID, data) then
+        local confirmed = ns.HasConfirmedWarEffort and ns.HasConfirmedWarEffort()
+        print("  AQ war effort: " .. (confirmed and "phase confirmed this session"
+            or "no war effort quest offered or in log"))
+        if not ns.GetOption("showWarEffortAlways") then
+            print("  use /fqp wareffort always to show these pins without confirmation")
+        end
+    end
     local viewedMapID = ns.GetViewedMapID and ns.GetViewedMapID()
     if available and ns.ProjectToViewedMap and viewedMapID then
         local nx, ny = ns.ProjectToViewedMap(data.mapID, data.x, data.y, viewedMapID)
@@ -850,6 +904,9 @@ function ns.PrintAPIProbe()
     print("  MapCanvasPinMixin: " .. has(MapCanvasPinMixin))
     print("  Settings API: " .. has(Settings and Settings.RegisterAddOnCategory))
     print("  GetQuestGreenRange: " .. has(GetQuestGreenRange))
+    print("  C_DateAndTime.GetCurrentCalendarTime: " .. has(C_DateAndTime and C_DateAndTime.GetCurrentCalendarTime))
+    print("  C_DateAndTime.GetTodaysDate: " .. has(C_DateAndTime and C_DateAndTime.GetTodaysDate))
+    print("  date: " .. has(date))
     print("  C_GossipInfo.GetAvailableQuests: " .. has(C_GossipInfo and C_GossipInfo.GetAvailableQuests))
     print("  C_GossipInfo.GetActiveQuests: " .. has(C_GossipInfo and C_GossipInfo.GetActiveQuests))
     print("  AcceptQuest: " .. has(AcceptQuest))
@@ -1015,7 +1072,7 @@ function ns.TryRegisterSettings()
                 self,
                 "showSeasonal",
                 L["Show seasonal / holiday quest pins"],
-                L["Lunar Festival elders, Darkmoon Faire, and other event quests."]
+                L["Event quests appear only while the event is live. Darkmoon Faire stays hidden on Forever."]
             )
             seasonal:SetPoint("TOPLEFT", profession, "BOTTOMLEFT", 0, 0)
 
@@ -1023,9 +1080,17 @@ function ns.TryRegisterSettings()
                 self,
                 "showWarEffort",
                 L["Show AQ war effort pins"],
-                L["Commodity turn-ins at Orgrimmar / Ironforge (Senior Sergeants, signets, \"Needs Your Help\")."]
+                L["Commodity turn-ins at Orgrimmar / Ironforge, shown after a war effort quest is offered or in your log."]
             )
             warEffort:SetPoint("TOPLEFT", seasonal, "BOTTOMLEFT", 0, 0)
+
+            local warEffortAlways = CreateOptionCheckbox(
+                self,
+                "showWarEffortAlways",
+                L["Always show AQ war effort pins"],
+                L["Show AQ war effort pins even before a war effort quest confirms the phase."]
+            )
+            warEffortAlways:SetPoint("TOPLEFT", warEffort, "BOTTOMLEFT", 0, 0)
 
             local repeatable = CreateOptionCheckbox(
                 self,
@@ -1033,7 +1098,7 @@ function ns.TryRegisterSettings()
                 L["Show repeatable quest pins"],
                 L["Blue start markers for repeatable, daily, weekly, and monthly quests."]
             )
-            repeatable:SetPoint("TOPLEFT", warEffort, "BOTTOMLEFT", 0, 0)
+            repeatable:SetPoint("TOPLEFT", warEffortAlways, "BOTTOMLEFT", 0, 0)
 
             local spawnClusters = CreateOptionCheckbox(
                 self,

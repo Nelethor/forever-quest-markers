@@ -2,7 +2,7 @@
 
 ## Quest database
 
-Quest coordinates, quest-giver and turn-in IDs, spawn points, restrictions, and related fields in `Database/` are derived from [QuestieDB](https://github.com/Questie/QuestieDB) Forever data. Holiday membership and static instance-tag corrections come from [Questie](https://github.com/Questie/Questie).
+Quest coordinates, quest-giver and turn-in IDs, spawn points, restrictions, and related fields in `Database/` are derived from [QuestieDB](https://github.com/Questie/QuestieDB) Forever data. Holiday membership, event date windows, the AQ war effort quest list, and static instance-tag corrections come from [Questie](https://github.com/Questie/Questie).
 
 - QuestieDB: https://github.com/Questie/QuestieDB
 - Questie: https://github.com/Questie/Questie
@@ -26,4 +26,4 @@ Map pins use Blizzard’s `QuestNormal` atlas. The generated yellow, blue, and r
 
 - Addon source: **GPL-3.0-or-later** ([LICENSE](LICENSE))
 - Quest records: [QuestieDB](https://github.com/Questie/QuestieDB) (GPL-3.0)
-- Holiday and instance-tag policy: [Questie](https://github.com/Questie/Questie) (GPL-3.0)
+- Holiday, event date, and instance-tag policy: [Questie](https://github.com/Questie/Questie) (GPL-3.0)
