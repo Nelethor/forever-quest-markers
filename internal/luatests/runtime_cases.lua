@@ -521,6 +521,7 @@ end
             end
             CreateFrame = function(kind)
                 local frame = { built = false, scripts = {}, Text = newRegion(), Low = newRegion(), High = newRegion() }
+                frame.SetSize = function(self, width, height) self.width, self.height = width, height end
                 frame.SetScript = function(self, name, callback) self.scripts[name] = callback end
                 frame.GetScript = function(self, name) return self.scripts[name] end
                 frame.SetEnabled = function(self, value) self.enabled = value end
@@ -536,6 +537,11 @@ end
             }
             assert(ns.TryRegisterSettings())
             controls[1].scripts.OnShow(controls[1])
+            for _, control in ipairs(controls) do
+                if type(control.optionKey) == "string" then
+                    assert(control.height == 26, "option rows must fit within the settings panel")
+                end
+            end
             ns.MapPins.Clear = function() end
             local categories = { showWorldMapPins = true, showNormal = true, showClass = true, showDungeon = true,
                 showProfession = true, showSeasonal = true, showWarEffort = true, showRepeatable = true }

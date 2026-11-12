@@ -952,8 +952,8 @@ local function CreateOptionCheckbox(parent, optionKey, label, tooltip)
         box = created
     else
         box = CreateFrame("CheckButton", nil, parent)
-        box:SetSize(26, 26)
     end
+    box:SetSize(26, 26)
     local text = box.Text
     if not text then
         text = box:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
