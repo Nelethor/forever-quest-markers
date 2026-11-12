@@ -24,7 +24,6 @@ type Record struct {
 	Faction                string
 	MinLevel               int
 	IsYearly               bool
-	Event                  int
 	Repeatable             bool
 	IsMonthly              bool
 	IsBreadcrumb           bool

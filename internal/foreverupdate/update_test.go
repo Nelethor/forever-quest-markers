@@ -90,6 +90,10 @@ func TestPrepareUpdateWritesCompatibilityRelease(t *testing.T) {
 	if !strings.Contains(string(notes), "## 1.2.4 - 2026-05-06") {
 		t.Fatalf("release notes not updated: %s", notes)
 	}
+	news, err := os.ReadFile(filepath.Join(root, "WhatsNew.lua"))
+	if err != nil || !strings.Contains(string(news), "1.60.1.69913") {
+		t.Fatalf("in-game release notes not updated: %s, %v", news, err)
+	}
 }
 
 func TestPrepareUpdateIgnoresSupportedInterfaceAndRejectsDowngrade(t *testing.T) {
@@ -113,6 +117,7 @@ func TestPrepareDryRunLeavesAllReleaseFilesUnchanged(t *testing.T) {
 		"VERSION":              "1.2.3\n",
 		"CHANGELOG.md":         "# Changelog\n\n## 1.2.3 - old\n",
 		"RELEASE_NOTES.md":     "old notes\n",
+		"WhatsNew.lua":         "old news\n",
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0o644); err != nil {

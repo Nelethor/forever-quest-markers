@@ -107,6 +107,10 @@ func Build(options Options) (*BuildResult, error) {
 		records = append(records, record)
 	}
 	sort.Slice(records, func(i, j int) bool { return records[i].QuestID < records[j].QuestID })
+	schedule, err := BuildEventSchedule(policy, records)
+	if err != nil {
+		return nil, err
+	}
 	meta := Metadata{
 		Source:          "QuestieDB-Forever",
 		Artifact:        options.ArtifactRef,
@@ -120,7 +124,7 @@ func Build(options Options) (*BuildResult, error) {
 		BuildTime:       artifact.BuildTime,
 		QuestCount:      len(records),
 	}
-	report := builder.report(meta, policy, baseline, records)
+	report := builder.report(meta, policy, baseline, records, schedule)
 	meta.QuestCount = report.Counts.Quests
 	meta.CoordCount = report.Counts.CoordPins
 	meta.TurnInCount = report.Counts.QuestsWithTurnIns
@@ -132,7 +136,7 @@ func Build(options Options) (*BuildResult, error) {
 			instanceTags[questID] = tagID
 		}
 	}
-	if err := EmitDatabase(options.OutputDir, records, meta, instanceTags); err != nil {
+	if err := EmitDatabase(options.OutputDir, records, meta, instanceTags, schedule); err != nil {
 		return nil, err
 	}
 	if err := WriteReport(options.ReportPath, report); err != nil {
@@ -377,7 +381,7 @@ func roundCoordinate(value float64) float64 {
 	return float64(int64(value*100+0.5)) / 100
 }
 
-func (builder *recordBuilder) report(meta Metadata, policy *questiepolicy.Policy, baseline map[int]baselineQuest, records []Record) Report {
+func (builder *recordBuilder) report(meta Metadata, policy *questiepolicy.Policy, baseline map[int]baselineQuest, records []Record, schedule *EventSchedule) Report {
 	report := Report{
 		Artifact: ArtifactReport{
 			Version:         meta.Version,
@@ -389,13 +393,18 @@ func (builder *recordBuilder) report(meta Metadata, policy *questiepolicy.Policy
 			BuildTime:       meta.BuildTime,
 		},
 		Policy: PolicyReport{
-			Source:         meta.PolicySource,
-			Commit:         meta.PolicyCommit,
-			HolidayEntries: policy.HolidayEntries,
-			HolidayQuests:  len(policy.HolidayQuestIDs),
-			HiddenEntries:  policy.HiddenEntries,
-			TagEntries:     policy.TagEntries,
-			InstanceQuests: len(policy.InstanceQuestIDs),
+			Source:          meta.PolicySource,
+			Commit:          meta.PolicyCommit,
+			HolidayEntries:  policy.HolidayEntries,
+			HolidayQuests:   len(policy.HolidayQuestIDs),
+			HiddenEntries:   policy.HiddenEntries,
+			EventWindows:    len(schedule.Events),
+			EventOverrides:  len(schedule.Overrides),
+			DisabledEvents:  len(schedule.Disabled),
+			WarEffortQuests: len(schedule.WarEffort),
+			LunarYears:      len(schedule.Lunar),
+			TagEntries:      policy.TagEntries,
+			InstanceQuests:  len(policy.InstanceQuestIDs),
 		},
 		Examples: map[string][]int{},
 	}
@@ -502,8 +511,14 @@ func (builder *recordBuilder) report(meta Metadata, policy *questiepolicy.Policy
 	report.Conflicts = conflicts
 	report.Deviations = []string{
 		"Era blacklist/quest-exclusion policy is not applied; applying it would hide 235 current baseline quests (191 true, 44 HIDE_ON_MAP; 231 otherwise pinnable). Season, class, and prerequisite availability are decided at runtime.",
-		"Questie holiday data has no event IDs; isYearly is populated and event is not.",
+		"Questie holiday quest files name their event instead of using event IDs; isYearly marks the record and EventPolicy.lua carries the event name.",
 		"Questie `breadcrumbs` lists incoming breadcrumb routes, so it feeds sourceQuestSingle; only `breadcrumbForQuestId` sets isBreadcrumb.",
+		"Darkmoon Faire is disabled because Questie has no Forever faire window and most of its records mix Mulgore and Elwynn coordinates.",
+	}
+	if schedule.LunarFirst != 0 {
+		report.Deviations = append(report.Deviations, fmt.Sprintf(
+			"Lunar Festival windows are pinned to Questie years %d through %d; later years hide with lunar-year-unknown.",
+			schedule.LunarFirst, schedule.LunarLast))
 	}
 	return report
 }

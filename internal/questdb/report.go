@@ -25,13 +25,18 @@ type ArtifactReport struct {
 }
 
 type PolicyReport struct {
-	Source         string `json:"source"`
-	Commit         string `json:"commit,omitempty"`
-	HolidayEntries int    `json:"holiday_entries"`
-	HolidayQuests  int    `json:"holiday_quests"`
-	HiddenEntries  int    `json:"hidden_entries"`
-	TagEntries     int    `json:"tag_entries"`
-	InstanceQuests int    `json:"instance_quests"`
+	Source          string `json:"source"`
+	Commit          string `json:"commit,omitempty"`
+	HolidayEntries  int    `json:"holiday_entries"`
+	HolidayQuests   int    `json:"holiday_quests"`
+	HiddenEntries   int    `json:"hidden_entries"`
+	EventWindows    int    `json:"event_windows"`
+	EventOverrides  int    `json:"event_overrides"`
+	DisabledEvents  int    `json:"disabled_events"`
+	WarEffortQuests int    `json:"war_effort_quests"`
+	LunarYears      int    `json:"lunar_years"`
+	TagEntries      int    `json:"tag_entries"`
+	InstanceQuests  int    `json:"instance_quests"`
 }
 
 type Counts struct {

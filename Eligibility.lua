@@ -49,6 +49,9 @@ function ns.NoteQuestAccepted(questID)
     if ns.offeredQuestIDs then
         ns.offeredQuestIDs[questID] = nil
     end
+    if ns.NoteWarEffortQuest then
+        ns.NoteWarEffortQuest(questID)
+    end
 end
 
 function ns.NoteQuestRemoved(questID)
@@ -445,25 +448,6 @@ function ns.HasRequiredSkill(requiredSkill)
     return skills[requiredSkill] and true or false
 end
 
-function ns.IsEventActive(eventID)
-    if not eventID then
-        return false
-    end
-    if C_Calendar and C_Calendar.IsEventActive then
-        local ok, active = pcall(C_Calendar.IsEventActive, eventID)
-        if ok and active then
-            return true
-        end
-    end
-    if IsHolidayActive then
-        local ok, active = pcall(IsHolidayActive, eventID)
-        if ok and active then
-            return true
-        end
-    end
-    return false
-end
-
 -- sourceQuestGroup is AND; sourceQuestSingle is OR with sourceQuestNumRequired
 -- (default 1). sourceQuests remains as a legacy fallback for saved/custom data.
 --
@@ -666,6 +650,9 @@ function ns.NoteOfferedQuest(questID)
         return
     end
     ns.offeredQuestIDs[questID] = true
+    if ns.NoteWarEffortQuest then
+        ns.NoteWarEffortQuest(questID)
+    end
     local offer = ns.lastOffer
     local data = ns.Quests and ns.Quests[questID]
     if data then
@@ -901,14 +888,28 @@ function ns.IsQuestAvailable(questID, data)
         return true, "npc-offered"
     end
 
-    if (data.isYearly or data.event) and not ns.GetOption("showSeasonal") then
-        if not ns.IsEventActive(data.event) then
+    if data.isYearly or data.event then
+        if not ns.GetOption("showSeasonal") then
             return false, "seasonal"
+        end
+        if not ns.GetEventState then
+            return false, "event-unknown"
+        end
+        local active, eventReason = ns.GetEventState(questID)
+        if not active then
+            return false, eventReason
         end
     end
 
-    if ns.IsWarEffortQuest and ns.IsWarEffortQuest(questID, data) and not ns.GetOption("showWarEffort") then
-        return false, "war-effort"
+    if ns.IsWarEffortQuest and ns.IsWarEffortQuest(questID, data) then
+        if not ns.GetOption("showWarEffort") then
+            return false, "war-effort"
+        end
+        if not ns.GetOption("showWarEffortAlways") then
+            if not (ns.HasConfirmedWarEffort and ns.HasConfirmedWarEffort()) then
+                return false, "war-effort-unconfirmed"
+            end
+        end
     end
 
     local altQuests = data.altQuests

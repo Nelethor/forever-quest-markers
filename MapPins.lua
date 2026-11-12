@@ -502,9 +502,11 @@ local function ShowSpawnCloud(pin)
     -- their own scale.
     local uiScale = UIParent.GetEffectiveScale and UIParent:GetEffectiveScale() or 1
     local canvasScale = canvas.GetEffectiveScale and canvas:GetEffectiveScale() or 1
-    if not uiScale or uiScale <= 0 or not canvasScale or canvasScale <= 0 then
+    local pinScale = pin.GetEffectiveScale and pin:GetEffectiveScale() or 1
+    if not uiScale or uiScale <= 0 or not canvasScale or canvasScale <= 0 or not pinScale or pinScale <= 0 then
         return
     end
+    centerX, centerY = centerX * pinScale / uiScale, centerY * pinScale / uiScale
     local unitsPerCanvasPixel = canvasScale / uiScale
     local shown = 0
     for i = 1, #points do

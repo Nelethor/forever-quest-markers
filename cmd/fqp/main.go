@@ -17,6 +17,8 @@ func main() {
 
 	var err error
 	switch os.Args[1] {
+	case "generate-news":
+		err = release.GenerateNews(".")
 	case "build-db":
 		err = questdb.RunBuild(os.Args[2:], os.Stdout, os.Stderr)
 	case "release":
@@ -39,6 +41,6 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: fqp <release|build-db|update-interface|compile-addon|repair-settings|generate-icon> [options]")
+	fmt.Fprintln(os.Stderr, "usage: fqp <release|generate-news|build-db|update-interface|compile-addon|repair-settings|generate-icon> [options]")
 	os.Exit(2)
 }

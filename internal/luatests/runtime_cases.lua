@@ -439,17 +439,18 @@ end
             local buttons = {}
             modify(nil, { CreateDivider = function() end, CreateTitle = function() end,
                 Insert = function(_, button) table.insert(buttons, button) end })
-            assert(#buttons == 10)
+            assert(#buttons == 11)
             assert(buttons[1].enabled == nil)
-            assert(buttons[10].label == "Click pins to track quest starts")
-            assert(buttons[10].enabled == nil)
-            for i = 2, 9 do assert(buttons[i].enabled()) end
+            assert(buttons[11].label == "Click pins to track quest starts")
+            assert(buttons[11].enabled == nil)
+            local categoryButtons = { 2, 3, 4, 5, 6, 7, 8, 10 }
+            for _, i in ipairs(categoryButtons) do assert(buttons[i].enabled()) end
             ns.SetOption("enabled", false)
-            for i = 2, 9 do assert(not buttons[i].enabled()) end
+            for _, i in ipairs(categoryButtons) do assert(not buttons[i].enabled()) end
             ns.SetOption("enabled", true)
-            for i = 2, 9 do assert(buttons[i].enabled()) end
+            for _, i in ipairs(categoryButtons) do assert(buttons[i].enabled()) end
             local keys = { "enabled", "showWorldMapPins", "showNormal", "showClass", "showDungeon",
-                "showProfession", "showSeasonal", "showWarEffort", "showRepeatable", "enablePinTracking" }
+                "showProfession", "showSeasonal", "showWarEffort", "showWarEffortAlways", "showRepeatable", "enablePinTracking" }
             for i, button in ipairs(buttons) do
                 assert(not button.label:find("Show", 1, true))
                 local before = ns.GetOption(keys[i])
@@ -519,11 +520,18 @@ end
                     { __index = function() return function() end end })
             end
             CreateFrame = function(kind)
-                local frame = { built = false, scripts = {}, Text = newRegion(), Low = newRegion(), High = newRegion() }
+                local frame = { built = false, shown = true, scripts = {}, Text = newRegion(), Low = newRegion(), High = newRegion() }
+                frame.SetSize = function(self, width, height) self.width, self.height = width, height end
                 frame.SetScript = function(self, name, callback) self.scripts[name] = callback end
                 frame.GetScript = function(self, name) return self.scripts[name] end
                 frame.SetEnabled = function(self, value) self.enabled = value end
                 frame.SetChecked = function(self, value) self.checked = value end
+                frame.Hide = function(self) self.shown = false end
+                frame.Show = function(self)
+                    local wasShown = self.shown
+                    self.shown = true
+                    if not wasShown and self.scripts.OnShow then self.scripts.OnShow(self) end
+                end
                 frame.CreateFontString = function() return newRegion() end
                 setmetatable(frame, { __index = function() return function() end end })
                 table.insert(controls, frame)
@@ -534,7 +542,13 @@ end
                 RegisterAddOnCategory = function() end,
             }
             assert(ns.TryRegisterSettings())
-            controls[1].scripts.OnShow(controls[1])
+            controls[1]:Show()
+            assert(controls[1].built, "settings controls must be built on first selection")
+            for _, control in ipairs(controls) do
+                if type(control.optionKey) == "string" then
+                    assert(control.height == 26, "option rows must fit within the settings panel")
+                end
+            end
             ns.MapPins.Clear = function() end
             local categories = { showWorldMapPins = true, showNormal = true, showClass = true, showDungeon = true,
                 showProfession = true, showSeasonal = true, showWarEffort = true, showRepeatable = true }
@@ -3128,6 +3142,7 @@ cases["map_pins_runtime.spawn_cloud_dots_use_map_pixels"] = function()
 
     ns.MapPins:Refresh("spawn-cloud")
     -- The hovered pin sits at the canvas point for (0.5, 0.5) at zoom 2.
+    pin.GetEffectiveScale = function() return 1 end
     pin.centerX, pin.centerY = 1000, 0
     pin.scripts.OnEnter(pin)
     assert(#cloudFrames == 2, "cloud dots " .. tostring(#cloudFrames))
@@ -3139,6 +3154,32 @@ cases["map_pins_runtime.spawn_cloud_dots_use_map_pixels"] = function()
     assert(math.abs(anchor.point[5] - 0) < 0.001, "anchor dot y " .. tostring(anchor.point[5]))
     assert(math.abs(second.point[4] - 1008) < 0.001, "second dot x " .. tostring(second.point[4]))
     assert(math.abs(second.point[5] - 0) < 0.001, "second dot y " .. tostring(second.point[5]))
+end
+
+cases["map_pins_runtime.spawn_cloud_tracks_scaled_map_and_ui"] = function()
+    setupPinRendering()
+    ns.Quests = {
+        [101] = { mapID = 1, x = 50, y = 50, title = "Spawn test",
+            coords = { { 50, 50, 1 }, { 50.4, 50.2, 1 } } },
+    }
+    ns.ByMap = { [1] = { 101 } }
+    options.showSpawnClusters = true
+    ns.MapPins:Refresh("scaled-spawn-cloud")
+    UIParent.GetEffectiveScale = function() return 0.8 end
+    local mapScale, zoom = 1, 1
+    mapCanvas.GetEffectiveScale = function() return 0.8 * mapScale * zoom end
+    pin.GetEffectiveScale = function() return 0.8 * mapScale end
+    for _, scenario in ipairs({ { 0.7, 1 }, { 1.4, 1 }, { 0.7, 2 }, { 1.4, 2 } }) do
+        mapScale, zoom = scenario[1], scenario[2]
+        -- The center returned by a scaled frame is in that frame's own units.
+        pin.centerX, pin.centerY = 600 / mapScale, 400 / mapScale
+        pin.scripts.OnEnter(pin)
+        local anchor, second = cloudFrames[1], cloudFrames[2]
+        assert(math.abs(anchor.point[4] - 600) < 0.001, "anchor x at scale " .. mapScale)
+        assert(math.abs(anchor.point[5] - 400) < 0.001, "anchor y at scale " .. mapScale)
+        assert(math.abs(second.point[4] - (600 + 4 * mapScale * zoom)) < 0.001, "spawn x at scale " .. mapScale)
+        assert(math.abs(second.point[5] - (400 - 1.6 * mapScale * zoom)) < 0.001, "spawn y at scale " .. mapScale)
+    end
 end
 
 cases["map_pins_runtime.stacked_quests_keep_separate_spawn_counts"] = function()
@@ -3219,8 +3260,8 @@ cases["localization.client_locale_and_fallback"] = function()
         if locale == "esES" or locale == "esMX" then
             assert(localNS.L["Show quest start pins"] == "Mostrar marcadores de inicio de misión")
             assert(localNS.L["Quest %d (title unavailable)"]:format(123) == "Misión 123 (título no disponible)")
-            local festival = localNS.L["Lunar Festival elders, Darkmoon Faire, and other event quests."]
-            assert(festival:find("Ancestros del Festival Lunar, Feria de la Luna Negra", 1, true))
+            local festival = localNS.L["Event quests appear only while the event is live. Darkmoon Faire stays hidden on Forever."]
+            assert(festival:find("Feria de la Luna Negra", 1, true))
             assert(localNS.L["Dungeon / raid quest"]:find(locale == "esES" and "mazmorra" or "calabozo", 1, true))
         elseif locale == "deDE" then
             assert(localNS.L["Show quest start pins"] == "Queststart-Markierungen anzeigen")
@@ -3399,6 +3440,407 @@ cases["localization.spanish_command_output"] = function()
     localNS.IsOnQuest = function() return false end
     localNS.PrintQuestWhy(1)
     assert(table.concat(lines, "\n"):find("Misión 1: se mostraría (ok)", 1, true))
+end
+
+cases["events_runtime.test_window_boundaries_and_new_year_wrap"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [1] = "Winter Veil" },
+        events = { ["Winter Veil"] = { { 12, 15, 10, 0 }, { 1, 2, 10, 0 } } },
+        overrides = {},
+        lunar = {},
+        disabled = {},
+        warEffort = {},
+    }
+    local function stateAt(month, day, hour, minute)
+        ns.CalendarNow = function()
+            return { month = month, day = day, hour = hour, minute = minute, year = 2026, source = "test" }
+        end
+        return ns.GetEventState(1)
+    end
+    local active, reason = stateAt(12, 15, 10, 0)
+    assert(active == true and reason == "event-active")
+    active, reason = stateAt(12, 15, 9, 59)
+    assert(active == false and reason == "event-window")
+    active, reason = stateAt(1, 2, 10, 0)
+    assert(active == true, reason)
+    active, reason = stateAt(1, 2, 10, 1)
+    assert(active == false and reason == "event-window")
+    active, reason = stateAt(7, 1, 12, 0)
+    assert(active == false and reason == "event-window")
+end
+
+cases["events_runtime.test_quest_override_narrows_base_window"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [8744] = "Winter Veil" },
+        events = { ["Winter Veil"] = { { 12, 15, 10, 0 }, { 1, 2, 10, 0 } } },
+        overrides = { [8744] = { { 12, 25, 0, 0 }, { 1, 2, 23, 59 } } },
+        lunar = {},
+        disabled = {},
+        warEffort = {},
+    }
+    local function stateAt(month, day, hour, minute)
+        ns.CalendarNow = function()
+            return { month = month, day = day, hour = hour, minute = minute, year = 2026, source = "test" }
+        end
+        return ns.GetEventState(8744)
+    end
+    local active, reason, detail = stateAt(12, 20, 12, 0)
+    assert(active == false and reason == "event-window")
+    assert(detail and detail.override, "override detail is missing")
+    active, reason = stateAt(12, 25, 0, 0)
+    assert(active == true, reason)
+    active, reason = stateAt(1, 1, 12, 0)
+    assert(active == true, reason)
+    active, reason = stateAt(1, 2, 10, 1)
+    assert(active == false and reason == "event-window")
+end
+
+cases["events_runtime.test_disabled_event_and_missing_lunar_year"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [1] = "Darkmoon Faire", [2] = "Lunar Festival" },
+        events = {},
+        overrides = {},
+        lunar = { [2026] = { { 2, 16, 6, 0 }, { 3, 9, 6, 0 } } },
+        disabled = { ["Darkmoon Faire"] = true },
+        warEffort = {},
+    }
+    ns.CalendarNow = function()
+        return { month = 6, day = 1, hour = 12, minute = 0, year = 2027, source = "test" }
+    end
+    local active, reason = ns.GetEventState(1)
+    assert(active == false and reason == "event-disabled")
+    active, reason = ns.GetEventState(2)
+    assert(active == false and reason == "lunar-year-unknown")
+    ns.CalendarNow = function()
+        return { month = 2, day = 16, hour = 6, minute = 0, year = 2026, source = "test" }
+    end
+    active, reason = ns.GetEventState(2)
+    assert(active == true and reason == "event-active")
+end
+
+cases["events_runtime.test_missing_calendar_api_hides_events"] = function()
+    ns = {}
+    C_DateAndTime = nil
+    date = nil
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [1] = "Winter Veil" },
+        events = { ["Winter Veil"] = { { 12, 15, 10, 0 }, { 1, 2, 10, 0 } } },
+        overrides = {},
+        lunar = {},
+        disabled = {},
+        warEffort = {},
+    }
+    local active, reason = ns.GetEventState(1)
+    assert(active == false and reason == "calendar-unknown")
+end
+
+cases["events_runtime.test_calendar_now_prefers_calendar_time"] = function()
+    ns = {}
+    C_DateAndTime = {
+        GetCurrentCalendarTime = function()
+            return { month = 2, monthDay = 16, hour = 6, minute = 5, year = 2026 }
+        end,
+        GetTodaysDate = function() error("GetTodaysDate must not be called") end,
+    }
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    local now = ns.CalendarNow()
+    assert(now.month == 2 and now.day == 16 and now.hour == 6 and now.minute == 5)
+    assert(now.source == "C_DateAndTime.GetCurrentCalendarTime")
+    C_DateAndTime.GetCurrentCalendarTime = nil
+    C_DateAndTime.GetTodaysDate = function() return 3, 1, 2026 end
+    now = ns.CalendarNow()
+    assert(now.month == 3 and now.day == 1 and now.hour == 0 and now.minute == 0)
+    assert(now.source == "C_DateAndTime.GetTodaysDate")
+    C_DateAndTime = nil
+    date = function(format)
+        assert(format == "*t")
+        return { month = 4, day = 2, hour = 7, min = 8, year = 2026 }
+    end
+    now = ns.CalendarNow()
+    assert(now.month == 4 and now.day == 2 and now.hour == 7 and now.minute == 8)
+    assert(now.source == "date")
+end
+
+cases["eligibility_runtime.test_seasonal_option_and_window"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [6961] = "Winter Veil" },
+        events = { ["Winter Veil"] = { { 12, 15, 10, 0 }, { 1, 2, 10, 0 } } },
+        overrides = {},
+        lunar = {},
+        disabled = {},
+        warEffort = {},
+    }
+    ns.options = { showSeasonal = true, showRepeatable = true, showWarEffort = true, showWarEffortAlways = false, showTrivial = true }
+    function ns.GetOption(key) return ns.options[key] end
+    UnitLevel = function() return 60 end
+    C_QuestLog = {
+        IsOnQuest = function() return false end,
+        IsQuestFlaggedCompleted = function() return false end,
+    }
+    assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
+    ns.CalendarNow = function()
+        return { month = 7, day = 1, hour = 12, minute = 0, year = 2026, source = "test" }
+    end
+    local available, reason = ns.IsQuestAvailable(6961, { isYearly = true, minLevel = 1 })
+    assert(available == false and reason == "event-window")
+    ns.CalendarNow = function()
+        return { month = 12, day = 20, hour = 12, minute = 0, year = 2026, source = "test" }
+    end
+    available, reason = ns.IsQuestAvailable(6961, { isYearly = true, minLevel = 1 })
+    assert(available == true, reason)
+    ns.options.showSeasonal = false
+    available, reason = ns.IsQuestAvailable(6961, { isYearly = true, minLevel = 1 })
+    assert(available == false and reason == "seasonal")
+end
+
+cases["eligibility_runtime.test_war_effort_phase_confirmation"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = {},
+        events = {},
+        overrides = {},
+        lunar = {},
+        disabled = {},
+        warEffort = { [8811] = true },
+    }
+    ns.options = { showSeasonal = false, showWarEffort = true, showWarEffortAlways = false, showRepeatable = true, showTrivial = true }
+    function ns.GetOption(key) return ns.options[key] end
+    UnitLevel = function() return 60 end
+    C_QuestLog = {
+        IsOnQuest = function() return false end,
+        IsQuestFlaggedCompleted = function() return false end,
+    }
+    assert(loadfile("WarEffort.lua"))("ForeverQuestPins", ns)
+    assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
+    ns.offeredQuestIDs = {}
+    local available, reason = ns.IsQuestAvailable(8811, { minLevel = 1 })
+    assert(available == false and reason == "war-effort-unconfirmed")
+    ns.NoteOfferedQuest(8811)
+    assert(ns.HasConfirmedWarEffort() == true)
+    available, reason = ns.IsQuestAvailable(8811, { minLevel = 1 })
+    assert(available == true, reason)
+    ns.options.showWarEffort = false
+    ns.offeredQuestIDs = {}
+    available, reason = ns.IsQuestAvailable(8811, { minLevel = 1 })
+    assert(available == false and reason == "war-effort")
+end
+
+cases["eligibility_runtime.test_war_effort_override_log_scan_and_old_range"] = function()
+    ns = {}
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = {},
+        events = {},
+        overrides = {},
+        lunar = {},
+        disabled = {},
+        warEffort = { [8811] = true, [8792] = true },
+    }
+    ns.options = { showSeasonal = false, showWarEffort = true, showWarEffortAlways = true, showRepeatable = true, showTrivial = true }
+    function ns.GetOption(key) return ns.options[key] end
+    UnitLevel = function() return 60 end
+    local onQuest = false
+    C_QuestLog = {
+        IsOnQuest = function(id) return onQuest and id == 8811 end,
+        IsQuestFlaggedCompleted = function() return false end,
+    }
+    assert(loadfile("WarEffort.lua"))("ForeverQuestPins", ns)
+    assert(loadfile("Eligibility.lua"))("ForeverQuestPins", ns)
+    local available, reason = ns.IsQuestAvailable(8811, { minLevel = 1 })
+    assert(available == true, reason)
+    ns.ResetWarEffortState()
+    ns.options.showWarEffortAlways = false
+    onQuest = true
+    available, reason = ns.IsQuestAvailable(8792, { minLevel = 1 })
+    assert(available == true, reason)
+    assert(ns.IsWarEffortQuest(8789, { qg = 15380 }) == false)
+end
+
+cases["quest_info_runtime.test_why_reports_event_window_and_aq_phase"] = function()
+    ns = {}
+    GetLocale = function() return "enUS" end
+    assert(loadfile("Localization.lua"))("ForeverQuestPins", ns)
+    assert(loadfile("Events.lua"))("ForeverQuestPins", ns)
+    ns.EventPolicy = {
+        byQuest = { [8744] = "Winter Veil" },
+        events = { ["Winter Veil"] = { { 12, 15, 10, 0 }, { 1, 2, 10, 0 } } },
+        overrides = { [8744] = { { 12, 25, 0, 0 }, { 1, 2, 23, 59 } } },
+        lunar = {},
+        disabled = {},
+        warEffort = { [8811] = true },
+    }
+    assert(loadfile("WarEffort.lua"))("ForeverQuestPins", ns)
+    ns.CalendarNow = function()
+        return { month = 7, day = 1, hour = 12, minute = 0, year = 2026, source = "test" }
+    end
+    ns.Quests = {
+        [8744] = { mapID = 1412, x = 10, y = 20, minLevel = 1 },
+        [8811] = { mapID = 1455, x = 30, y = 40, minLevel = 1 },
+    }
+    ns.GetQuestTitle = function(questID) return "Quest " .. questID end
+    ns.IsQuestFlaggedCompleted = function() return false end
+    ns.IsOnQuest = function() return false end
+    ns.IsQuestAvailable = function(_, _, reason) return false, ns.whyReason end
+    assert(loadfile("Config.lua"))("ForeverQuestPins", ns)
+    ns.db = { showWarEffortAlways = false }
+    local lines = {}
+    print = function(line) lines[#lines + 1] = tostring(line) end
+
+    ns.whyReason = "event-window"
+    ns.PrintQuestWhy(8744)
+    local text = table.concat(lines, "\n")
+    assert(text:find("event Winter Veil: not live (event-window)", 1, true), text)
+    assert(text:find("window 15/12 10:00-02/01 10:00", 1, true), text)
+    assert(text:find("override 25/12 00:00-02/01 23:59", 1, true), text)
+    assert(text:find("server time 2026-07-01 12:00 from test", 1, true), text)
+
+    lines = {}
+    ns.whyReason = "war-effort-unconfirmed"
+    ns.PrintQuestWhy(8811)
+    text = table.concat(lines, "\n")
+    assert(text:find("AQ war effort: no war effort quest offered or in log", 1, true), text)
+    assert(text:find("use /fqp wareffort always", 1, true), text)
+end
+
+cases["events_runtime.test_generated_event_policy_loads"] = function()
+    ns = {}
+    assert(loadfile("Database/EventPolicy.lua"))("ForeverQuestPins", ns)
+    local policy = assert(ns.EventPolicy, "EventPolicy table is missing")
+    local function count(values)
+        local total = 0
+        for _ in pairs(values) do total = total + 1 end
+        return total
+    end
+    assert(count(policy.byQuest) == 220)
+    assert(count(policy.events) == 6)
+    assert(count(policy.overrides) == 11)
+    assert(count(policy.lunar) == 10)
+    assert(policy.disabled["Darkmoon Faire"] == true)
+    assert(policy.warEffort[8811] == true)
+    assert(policy.warEffort[8792] == true)
+    assert(policy.warEffort[8789] == nil)
+    assert(policy.byQuest[8744] == "Winter Veil")
+    assert(policy.overrides[8744][1][1] == 12 and policy.overrides[8744][1][2] == 25)
+    assert(policy.lunarYears.first == 2019 and policy.lunarYears.last == 2028)
+end
+
+cases["setup_runtime.preserves_current_settings_and_stages_choices"] = function()
+    local options = { enabled = false, autoAccept = true, showRepeatable = false, autoAcceptLevelOffset = 1 }
+    local writes, completed, printed = {}, 0, {}
+    ns = { db = {}, WhatsNew = { version = "1.2.3", lines = { "A feature" } } }
+    ns.GetOption = function(key) return options[key] or false end
+    ns.SetOption = function(key, value) writes[key] = value; options[key] = value end
+    ns.WipeSettings = function() writes.defaults = true end
+    ns.SaveWelcomeState = function(done, version)
+        if done then completed = completed + 1; ns.db._setupComplete = true end
+        if version then ns.db._newsVersion = version end
+    end
+    print = function(text) table.insert(printed, text) end
+    local controls = {}
+    local function region()
+        return setmetatable({}, { __index = function() return function() end end })
+    end
+    CreateFrame = function(kind, name, parent, template)
+        local object = { Text = region(), Low = region(), High = region(), scripts = {}, template = template }
+        object.SetScript = function(self, event, fn) self.scripts[event] = fn end
+        object.CreateFontString = function() return region() end
+        object.CreateTexture = function() return region() end
+        object.SetText = function(self, text) self.label = text end
+        object.SetChecked = function(self, value) self.checked = value end
+        object.GetChecked = function(self) return self.checked end
+        object.SetValue = function(self, value)
+            self.value = value
+            if self.scripts.OnValueChanged then self.scripts.OnValueChanged(self, value) end
+        end
+        object.EnableMouse = function(self, enabled) self.mouseEnabled = enabled end
+        object.Show = function(self) self.shown = true end
+        object.Hide = function(self) self.shown = false end
+        object.SetShown = function(self, shown) self.shown = shown end
+        setmetatable(object, { __index = function() return function() end end })
+        table.insert(controls, object)
+        return object
+    end
+    assert(loadfile("Setup.lua"))("ForeverQuestPins", ns)
+    ns.StartWelcome()
+    assert(#printed == 2 and ns.db._newsVersion == "1.2.3")
+    local function button(label)
+        for _, control in ipairs(controls) do
+            if control.template == "UIPanelButtonTemplate" and control.label == label then return control end
+        end
+        error("missing button " .. label)
+    end
+    button("Use Current Settings").scripts.OnClick()
+    assert(completed == 1 and next(writes) == nil)
+    ns.StartWelcome()
+    assert(#printed == 2 and completed == 1)
+    ns.ShowSetup()
+    button("Choose Options").scripts.OnClick()
+    local enabled
+    for _, control in ipairs(controls) do if control.key == "enabled" then enabled = control end end
+    assert(enabled and enabled.checked == false)
+    enabled.checked = true
+    enabled.scripts.OnClick(enabled)
+    assert(next(writes) == nil, "guided choices must remain staged")
+    button("Next").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    local slider, limit
+    for _, control in ipairs(controls) do
+        if control.template == "OptionsSliderTemplate" then slider = control end
+        if control.key == "autoAcceptRangeEnabled" then limit = control end
+    end
+    assert(slider and slider.shown and slider.value == 1 and not slider.mouseEnabled)
+    limit.checked = true
+    limit.scripts.OnClick(limit)
+    assert(slider.mouseEnabled)
+    slider:SetValue(3)
+    assert(next(writes) == nil, "level limit must remain staged")
+    button("Back").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    assert(slider.value == 3 and slider.mouseEnabled)
+    button("Apply").scripts.OnClick()
+    assert(writes.enabled == true and writes.autoAccept == nil and options.autoAccept == true)
+    assert(writes.autoAcceptRangeEnabled == true and writes.autoAcceptLevelOffset == 3)
+    ns.ShowSetup()
+    button("Use Defaults").scripts.OnClick()
+    assert(writes.defaults == true)
+end
+
+cases["setup_runtime.markers_survive_settings_recovery_without_changing_options"] = function()
+    local mirror = ""
+    C_CVar = {
+        GetCVar = function() return mirror end,
+        SetCVar = function(_, value) mirror = value end,
+        RegisterCVar = function() end,
+    }
+    ForeverQuestPinsDB = { enabled = false, autoAccept = true, _revision = 9 }
+    ForeverQuestPinsCharDB = {}
+    ForeverQuestPinsDB_Settings = {}
+    ForeverQuestPinsCharacterSettings = {}
+    ns = {}
+    assert(loadfile("Config.lua"))("ForeverQuestPins", ns)
+    ns.InitSettings()
+    assert(ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
+    local revision = ns.db._revision
+    ns.SaveWelcomeState(true, "1.2.3")
+    assert(ns.db._revision == revision and ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
+    assert(mirror:find("setupComplete=1", 1, true) and mirror:find("newsVersion=1.2.3", 1, true))
+    ForeverQuestPinsDB, ForeverQuestPinsCharDB = {}, {}
+    ForeverQuestPinsDB_Settings, ForeverQuestPinsCharacterSettings = {}, {}
+    ns.db = nil
+    ns.InitSettings()
+    assert(ns.db._setupComplete == true and ns.db._newsVersion == "1.2.3")
+    assert(ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
 end
 
 local name = assert(os.getenv("FQP_LUA_CASE"), "FQP_LUA_CASE is required")
