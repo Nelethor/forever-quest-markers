@@ -48,6 +48,8 @@ local gamepadHoverAccum = 0
 local activeCursorInput = "mouse"
 local lastMouseX, lastMouseY
 local liveAccum = 0
+local stitchedPins = false
+local ReprojectStitchedPins
 local canvasCache
 local canvasCacheName
 local lastStatus = {
@@ -100,6 +102,11 @@ local function Norm(x, y)
         return x / 100, y / 100
     end
     return x, y
+end
+
+local function IsOpenMapStitched()
+    return OpenMapAPI and OpenMapAPI.IsStitched and OpenMapAPI.WorldFromMap
+        and OpenMapAPI.MapFromWorld and OpenMapAPI.IsStitched() or false
 end
 
 local function InvalidateCanvas()
@@ -220,6 +227,13 @@ end
 function ns.ProjectToViewedMap(questMapID, x, y, viewedMapID)
     local nx, ny = Norm(x, y)
     if not nx or not ny or not questMapID or not viewedMapID then
+        return nil, nil
+    end
+    if IsOpenMapStitched() then
+        local u, v = OpenMapAPI.WorldFromMap(questMapID, nx, ny)
+        if u and v then
+            return OpenMapAPI.MapFromWorld(viewedMapID, u, v)
+        end
         return nil, nil
     end
     if questMapID == viewedMapID then
@@ -1157,7 +1171,8 @@ local function RaisePin(pin, parent)
     end
     -- Map detail layers sit well above the canvas default; +20 was under the art
     -- so some bangs disappeared depending on zoom/layer order.
-    pin:SetFrameLevel(base + 400)
+    local artLevel = IsOpenMapStitched() and OpenMapAPI.ArtTopLevel and OpenMapAPI.ArtTopLevel() or 0
+    pin:SetFrameLevel(math.max(base + 400, (artLevel or 0) + 1))
     -- Keep the pin on the canvas strata. HIGH pulled pins out of the map child
     -- and they stopped compositing on Forever's world map.
     if pin.SetFrameStrata and parent and parent.GetFrameStrata then
@@ -1216,10 +1231,36 @@ function MapPins:RepositionAll()
     end
 end
 
+ReprojectStitchedPins = function(mapID)
+    local oldMap = lastStatus.viewedMap
+    if not oldMap or not mapID then return false end
+    if oldMap == mapID then return true end
+    local u, v = OpenMapAPI.WorldFromMap(oldMap, 0.5, 0.5)
+    if not u or not v or not OpenMapAPI.MapFromWorld(mapID, u, v) then return false end
+    local function project(x, y)
+        local u, v = OpenMapAPI.WorldFromMap(oldMap, x, y)
+        if u and v then return OpenMapAPI.MapFromWorld(mapID, u, v) end
+    end
+    HideSpawnCloud()
+    for i = 1, #active do
+        local pin = active[i]
+        pin.nx, pin.ny = project(pin.attNx, pin.attNy)
+        pin.attNx, pin.attNy = pin.nx, pin.ny
+        pin.live = nil
+        if pin.SetMouseClickEnabled then pin:SetMouseClickEnabled(PinTrackingEnabled()) end
+        for _, point in ipairs(pin.spawnPoints or {}) do
+            point.nx, point.ny = project(point.nx, point.ny)
+        end
+    end
+    lastStatus.viewedMap = mapID
+    MapPins:RepositionAll()
+    return true
+end
+
 local function AcquirePin(parent)
     -- The native gamepad cursor scans MapCanvas pins outside secure code. Use
     -- ordinary canvas children in gamepad mode and resolve hover privately.
-    if not IsGamepadUIEnabled() and MapCanvasPinMixin and WorldMapFrame and WorldMapFrame.AcquirePin then
+    if not IsOpenMapStitched() and not IsGamepadUIEnabled() and MapCanvasPinMixin and WorldMapFrame and WorldMapFrame.AcquirePin then
         -- Populate the mixin lazily in case Blizzard_MapCanvas loaded after us.
         for key, value in pairs(MapCanvasPinMixin) do
             if ForeverQuestPinsMapPinMixin[key] == nil then
@@ -1780,7 +1821,12 @@ function MapPins:Refresh(reason)
         lastStatus.mode = "combat-deferred"
         return
     end
+    local stitched = IsOpenMapStitched()
+    if stitched and stitchedPins and (reason == "map-changed" or reason == "map-display") then
+        if ReprojectStitchedPins(ns.GetViewedMapID()) then return end
+    end
     self:Clear()
+    stitchedPins = false
     lastStatus.lastError = nil
     lastStatus.mode = "canvas"
 
@@ -1828,6 +1874,7 @@ function MapPins:Refresh(reason)
         return
     end
     lastStatus.zeroRetries = 0
+    stitchedPins = stitched
     lastStatus.paintedIDs = {}
 
     local byMap = ns.ByMap or {}
@@ -1898,6 +1945,7 @@ end
 -- Avoid HookScript on WorldMapFrame; use hooksecurefunc and our own OnUpdate while open.
 local mapWatch = CreateFrame("Frame")
 local mapOpen = false
+local lastStitchedObserved
 local sizeWatchFrames = {}
 local sizeSnapshot = {}
 
@@ -1936,6 +1984,7 @@ end
 
 local function OnMapOpen()
     mapOpen = true
+    lastStitchedObserved = IsOpenMapStitched()
     ResetSizeSnapshots()
     InvalidateCanvas()
     ns.RequestRefresh("map-show")
@@ -1949,6 +1998,7 @@ end
 
 local function OnMapClose()
     mapOpen = false
+    lastStitchedObserved = nil
     sizeSnapshot = {}
     sizeWatchFrames = {}
     liveAccum = 0
@@ -1964,6 +2014,11 @@ end
 mapWatch:SetScript("OnUpdate", function(_, elapsed)
     if not mapOpen then
         return
+    end
+    local stitched = IsOpenMapStitched()
+    if stitched ~= lastStitchedObserved then
+        lastStitchedObserved = stitched
+        ns.RequestRefresh("openmap-mode")
     end
     local sizeChanged = MapSizeChanged()
     if sizeChanged then
@@ -2022,6 +2077,9 @@ function MapPins:HookMap()
     if WorldMapFrame.OnMapChanged then
         hooksecurefunc(WorldMapFrame, "OnMapChanged", function()
             InvalidateCanvas()
+            if stitchedPins and IsOpenMapStitched() and ReprojectStitchedPins(ns.GetViewedMapID()) then
+                return
+            end
             ns.RequestRefresh("map-changed")
         end)
     end
@@ -2035,6 +2093,10 @@ function MapPins:HookMap()
     if WorldMapFrame.SynchronizeDisplayState then
         hooksecurefunc(WorldMapFrame, "SynchronizeDisplayState", function()
             InvalidateCanvas()
+            if stitchedPins and IsOpenMapStitched() and ReprojectStitchedPins(ns.GetViewedMapID()) then
+                MapPins:RepositionAll()
+                return
+            end
             ns.RequestRefresh("map-display")
         end)
     end

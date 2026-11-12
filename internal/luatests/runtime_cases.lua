@@ -3843,6 +3843,41 @@ cases["setup_runtime.markers_survive_settings_recovery_without_changing_options"
     assert(ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
 end
 
+cases["map_pins_runtime.openmap_keeps_pins_across_host_changes"] = function()
+    setupPinRendering()
+    local mapID = 1
+    local stitched = true
+    WorldMapFrame.GetMapID = function() return mapID end
+    OpenMapAPI = {
+        IsStitched = function() return stitched end,
+        WorldFromMap = function(id, x, y) return x / 2 + (id - 1) / 2, y end,
+        MapFromWorld = function(id, u, v) return (u - (id - 1) / 2) * 2, v end,
+    }
+    ns.Quests[102] = { mapID = 2, x = 50, y = 50 }
+    ns.ByMap[2] = { 102 }
+    ns.MapPins:Refresh("initial")
+    assert(ns.MapPins:GetStatus().count == 2)
+    local original = pin
+    mapID = 2
+    ns.MapPins:Refresh("map-changed")
+    assert(pin == original and original.shown)
+    assert(ns.MapPins:GetStatus().count == 2)
+    assert(math.abs(original.point[4] - 500) < 0.001)
+    InCombatLockdown = function() return true end
+    ns.MapPins:Refresh("QUEST_TURNED_IN")
+    assert(ns.MapPins:GetStatus().mode == "combat-deferred" and original.shown)
+    InCombatLockdown = function() return false end
+    ns.Quests[102] = nil
+    ns.MapPins:Refresh("QUEST_TURNED_IN")
+    assert(ns.MapPins:GetStatus().count == 1)
+    stitched = false
+    ns.MapPins:Refresh("map-display")
+    assert(ns.MapPins:GetStatus().count == 0)
+    mapID = 1
+    ns.MapPins:Refresh("map-changed")
+    assert(ns.MapPins:GetStatus().count == 1)
+end
+
 local name = assert(os.getenv("FQP_LUA_CASE"), "FQP_LUA_CASE is required")
 assert(cases[name], "unknown LuaJIT case: " .. name)()
 print("PASS " .. name)
