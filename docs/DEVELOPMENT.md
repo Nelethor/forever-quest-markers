@@ -58,7 +58,7 @@ Optional parity review against an older database:
 go run ./cmd/fqp build-db ... --out Database --baseline /path/to/old/ForeverQuests.lua
 ```
 
-This adds recovered/lost starts, coordinate changes, flag changes, and conflicts to `Database/build_report.json`. The committed build report omits the baseline so CI can reproduce it exactly from the pinned inputs.
+This adds recovered/lost starts, coordinate changes, flag changes, and conflicts to `Database/build_report.json`. The committed build report omits the baseline so it can be reproduced from the pinned inputs.
 
 ### Automated updates
 
@@ -97,7 +97,7 @@ go vet ./...
 
 The Go Lua-runtime tests require LuaJIT on `PATH`. On macOS with Homebrew, install it with `brew install luajit`; CI installs the Ubuntu `luajit` package.
 
-CI (`validate`) downloads the artifact checksum pinned in `Database/Metadata.lua`, regenerates the database from that artifact and the pinned Questie policy commit, fails on drift, and dry-runs the packager.
+CI (`validate`) runs the Go tests, checks release intent, and dry-runs the packager. Database regeneration runs in the automated update workflow, not CI.
 
 ## Local builds
 
