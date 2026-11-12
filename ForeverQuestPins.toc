@@ -19,6 +19,7 @@ Database\Metadata.lua
 Database\ForeverQuests.lua
 Database\QuestTagCorrections.lua
 Database\EventPolicy.lua
+Database\VanillaQuests.lua
 Localization.lua
 Config.lua
 HiddenQuests.lua

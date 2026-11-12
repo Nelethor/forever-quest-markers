@@ -17,6 +17,7 @@ ns.defaults = {
     showDungeon = true,
     showRepeatable = true,
     showSpawnClusters = true,
+    highlightNewQuests = true,
     showSeasonal = false,
     showWarEffort = false,
     showWarEffortAlways = false,
@@ -658,6 +659,7 @@ function ns.PrintSettingsDebug()
         "highLevelGap",
         "showRepeatable",
         "showSpawnClusters",
+        "highlightNewQuests",
         "showSeasonal",
         "showWarEffort",
         "showWarEffortAlways",
@@ -1108,16 +1110,24 @@ function ns.TryRegisterSettings()
             )
             spawnClusters:SetPoint("TOPLEFT", repeatable, "BOTTOMLEFT", 0, 0)
 
+            local highlightNew = CreateOptionCheckbox(
+                self,
+                "highlightNewQuests",
+                L["Show tint for quests new in WoW Forever"],
+                L["Yellow start markers for quests that were not in original Classic get the Forever yellow-to-blue gradient."]
+            )
+            highlightNew:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, 0)
+
             local trivial = CreateOptionCheckbox(
                 self,
                 "showTrivial",
                 L["Show low-level quests"],
                 L["When off, hides pins for quests too far below your level. Set how far with the slider below."]
             )
-            trivial:SetPoint("TOPLEFT", spawnClusters, "BOTTOMLEFT", 0, 0)
+            trivial:SetPoint("TOPLEFT", highlightNew, "BOTTOMLEFT", 0, 0)
 
             local trivialGap = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
-            trivialGap:SetPoint("TOPLEFT", trivial, "BOTTOMLEFT", 8, -24)
+            trivialGap:SetPoint("TOPLEFT", trivial, "BOTTOMLEFT", 8, -22)
             trivialGap:SetSize(240, 16)
             trivialGap:SetMinMaxValues(TRIVIAL_GAP_MIN, TRIVIAL_GAP_MAX)
             trivialGap:SetValueStep(1)
@@ -1145,7 +1155,7 @@ function ns.TryRegisterSettings()
             optionChecks[#optionChecks + 1] = trivialGap
 
             local highLevelGap = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
-            highLevelGap:SetPoint("TOPLEFT", trivialGap, "BOTTOMLEFT", 0, -32)
+            highLevelGap:SetPoint("TOPLEFT", trivialGap, "BOTTOMLEFT", 0, -26)
             highLevelGap:SetSize(240, 16)
             highLevelGap:SetMinMaxValues(HIGH_LEVEL_GAP_MIN, HIGH_LEVEL_GAP_MAX)
             highLevelGap:SetValueStep(1)
@@ -1172,7 +1182,7 @@ function ns.TryRegisterSettings()
             optionChecks[#optionChecks + 1] = highLevelGap
 
             local iconScale = CreateFrame("Slider", nil, self, "OptionsSliderTemplate")
-            iconScale:SetPoint("TOPLEFT", highLevelGap, "BOTTOMLEFT", 0, -32)
+            iconScale:SetPoint("TOPLEFT", highLevelGap, "BOTTOMLEFT", 0, -26)
             iconScale:SetSize(240, 16)
             iconScale:SetMinMaxValues(50, 150)
             iconScale:SetValueStep(5)
@@ -1334,7 +1344,7 @@ function ns.TryRegisterSettings()
             navigationHeading:SetPoint("TOPLEFT", resetHiddenCaption, "BOTTOMLEFT", 0, -8)
 
             local slash = self:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-            slash:SetPoint("TOPLEFT", iconScale, "BOTTOMLEFT", -4, -16)
+            slash:SetPoint("TOPLEFT", npcTooltips, "BOTTOMLEFT", 4, -12)
             slash:SetText(L["Type /fqp for commands and troubleshooting."])
         end
         ns.SyncSettingsCheckboxes()

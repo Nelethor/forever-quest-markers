@@ -56,6 +56,7 @@ Escape → Options → AddOns → **Forever Quest Pins**, use the world map's **
 | High-level range slider | All (show quests at every level above you; move left to hide quests 3+ through 14+ levels above you) |
 | Show repeatable quest pins | On |
 | Show spawn clusters | On (group nearby spawns into one pin; off shows one pin per quest) |
+| Show tint for quests new in WoW Forever | On (yellow start markers for quests not in original Classic get the Forever yellow-to-blue gradient) |
 | Show seasonal / holiday quest pins | Off (when on, pins appear only while the event is live; Darkmoon Faire stays hidden) |
 | Show normal quest start pins | On |
 | Show class quest pins | On |
