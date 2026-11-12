@@ -2,6 +2,10 @@
 
 Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds from `main` are available as commit-specific GitHub Actions artifacts for testing.
 
+## 1.0.2 - 2026-11-12
+
+- Keep quest pins visible across zones when moving OpenMap's stitched world map.
+
 ## 1.0.1 - 2026-11-11
 
 - Add a first-run setup guide with options to keep current settings, use defaults, or choose settings, plus in-game release highlights.
