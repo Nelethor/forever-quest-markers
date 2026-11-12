@@ -22,6 +22,8 @@ Database\EventPolicy.lua
 Database\VanillaQuests.lua
 Localization.lua
 Config.lua
+WhatsNew.lua
+Setup.lua
 HiddenQuests.lua
 WarEffort.lua
 Events.lua

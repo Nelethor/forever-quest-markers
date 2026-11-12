@@ -520,12 +520,18 @@ end
                     { __index = function() return function() end end })
             end
             CreateFrame = function(kind)
-                local frame = { built = false, scripts = {}, Text = newRegion(), Low = newRegion(), High = newRegion() }
+                local frame = { built = false, shown = true, scripts = {}, Text = newRegion(), Low = newRegion(), High = newRegion() }
                 frame.SetSize = function(self, width, height) self.width, self.height = width, height end
                 frame.SetScript = function(self, name, callback) self.scripts[name] = callback end
                 frame.GetScript = function(self, name) return self.scripts[name] end
                 frame.SetEnabled = function(self, value) self.enabled = value end
                 frame.SetChecked = function(self, value) self.checked = value end
+                frame.Hide = function(self) self.shown = false end
+                frame.Show = function(self)
+                    local wasShown = self.shown
+                    self.shown = true
+                    if not wasShown and self.scripts.OnShow then self.scripts.OnShow(self) end
+                end
                 frame.CreateFontString = function() return newRegion() end
                 setmetatable(frame, { __index = function() return function() end end })
                 table.insert(controls, frame)
@@ -536,7 +542,8 @@ end
                 RegisterAddOnCategory = function() end,
             }
             assert(ns.TryRegisterSettings())
-            controls[1].scripts.OnShow(controls[1])
+            controls[1]:Show()
+            assert(controls[1].built, "settings controls must be built on first selection")
             for _, control in ipairs(controls) do
                 if type(control.optionKey) == "string" then
                     assert(control.height == 26, "option rows must fit within the settings panel")
@@ -3725,6 +3732,115 @@ cases["events_runtime.test_generated_event_policy_loads"] = function()
     assert(policy.byQuest[8744] == "Winter Veil")
     assert(policy.overrides[8744][1][1] == 12 and policy.overrides[8744][1][2] == 25)
     assert(policy.lunarYears.first == 2019 and policy.lunarYears.last == 2028)
+end
+
+cases["setup_runtime.preserves_current_settings_and_stages_choices"] = function()
+    local options = { enabled = false, autoAccept = true, showRepeatable = false, autoAcceptLevelOffset = 1 }
+    local writes, completed, printed = {}, 0, {}
+    ns = { db = {}, WhatsNew = { version = "1.2.3", lines = { "A feature" } } }
+    ns.GetOption = function(key) return options[key] or false end
+    ns.SetOption = function(key, value) writes[key] = value; options[key] = value end
+    ns.WipeSettings = function() writes.defaults = true end
+    ns.SaveWelcomeState = function(done, version)
+        if done then completed = completed + 1; ns.db._setupComplete = true end
+        if version then ns.db._newsVersion = version end
+    end
+    print = function(text) table.insert(printed, text) end
+    local controls = {}
+    local function region()
+        return setmetatable({}, { __index = function() return function() end end })
+    end
+    CreateFrame = function(kind, name, parent, template)
+        local object = { Text = region(), Low = region(), High = region(), scripts = {}, template = template }
+        object.SetScript = function(self, event, fn) self.scripts[event] = fn end
+        object.CreateFontString = function() return region() end
+        object.CreateTexture = function() return region() end
+        object.SetText = function(self, text) self.label = text end
+        object.SetChecked = function(self, value) self.checked = value end
+        object.GetChecked = function(self) return self.checked end
+        object.SetValue = function(self, value)
+            self.value = value
+            if self.scripts.OnValueChanged then self.scripts.OnValueChanged(self, value) end
+        end
+        object.EnableMouse = function(self, enabled) self.mouseEnabled = enabled end
+        object.Show = function(self) self.shown = true end
+        object.Hide = function(self) self.shown = false end
+        object.SetShown = function(self, shown) self.shown = shown end
+        setmetatable(object, { __index = function() return function() end end })
+        table.insert(controls, object)
+        return object
+    end
+    assert(loadfile("Setup.lua"))("ForeverQuestPins", ns)
+    ns.StartWelcome()
+    assert(#printed == 2 and ns.db._newsVersion == "1.2.3")
+    local function button(label)
+        for _, control in ipairs(controls) do
+            if control.template == "UIPanelButtonTemplate" and control.label == label then return control end
+        end
+        error("missing button " .. label)
+    end
+    button("Use Current Settings").scripts.OnClick()
+    assert(completed == 1 and next(writes) == nil)
+    ns.StartWelcome()
+    assert(#printed == 2 and completed == 1)
+    ns.ShowSetup()
+    button("Choose Options").scripts.OnClick()
+    local enabled
+    for _, control in ipairs(controls) do if control.key == "enabled" then enabled = control end end
+    assert(enabled and enabled.checked == false)
+    enabled.checked = true
+    enabled.scripts.OnClick(enabled)
+    assert(next(writes) == nil, "guided choices must remain staged")
+    button("Next").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    local slider, limit
+    for _, control in ipairs(controls) do
+        if control.template == "OptionsSliderTemplate" then slider = control end
+        if control.key == "autoAcceptRangeEnabled" then limit = control end
+    end
+    assert(slider and slider.shown and slider.value == 1 and not slider.mouseEnabled)
+    limit.checked = true
+    limit.scripts.OnClick(limit)
+    assert(slider.mouseEnabled)
+    slider:SetValue(3)
+    assert(next(writes) == nil, "level limit must remain staged")
+    button("Back").scripts.OnClick()
+    button("Next").scripts.OnClick()
+    assert(slider.value == 3 and slider.mouseEnabled)
+    button("Apply").scripts.OnClick()
+    assert(writes.enabled == true and writes.autoAccept == nil and options.autoAccept == true)
+    assert(writes.autoAcceptRangeEnabled == true and writes.autoAcceptLevelOffset == 3)
+    ns.ShowSetup()
+    button("Use Defaults").scripts.OnClick()
+    assert(writes.defaults == true)
+end
+
+cases["setup_runtime.markers_survive_settings_recovery_without_changing_options"] = function()
+    local mirror = ""
+    C_CVar = {
+        GetCVar = function() return mirror end,
+        SetCVar = function(_, value) mirror = value end,
+        RegisterCVar = function() end,
+    }
+    ForeverQuestPinsDB = { enabled = false, autoAccept = true, _revision = 9 }
+    ForeverQuestPinsCharDB = {}
+    ForeverQuestPinsDB_Settings = {}
+    ForeverQuestPinsCharacterSettings = {}
+    ns = {}
+    assert(loadfile("Config.lua"))("ForeverQuestPins", ns)
+    ns.InitSettings()
+    assert(ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
+    local revision = ns.db._revision
+    ns.SaveWelcomeState(true, "1.2.3")
+    assert(ns.db._revision == revision and ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
+    assert(mirror:find("setupComplete=1", 1, true) and mirror:find("newsVersion=1.2.3", 1, true))
+    ForeverQuestPinsDB, ForeverQuestPinsCharDB = {}, {}
+    ForeverQuestPinsDB_Settings, ForeverQuestPinsCharacterSettings = {}, {}
+    ns.db = nil
+    ns.InitSettings()
+    assert(ns.db._setupComplete == true and ns.db._newsVersion == "1.2.3")
+    assert(ns.GetOption("enabled") == false and ns.GetOption("autoAccept") == true)
 end
 
 local name = assert(os.getenv("FQP_LUA_CASE"), "FQP_LUA_CASE is required")

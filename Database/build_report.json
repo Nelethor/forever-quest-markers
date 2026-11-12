@@ -1,8 +1,8 @@
 {
   "artifact": {
-    "version": "1.0.14-dev.7f629bf",
-    "commit": "7f629bf2f41c3bfe40bb8d5cec3b5691bb1d4dca",
-    "sha256": "f0442af288a63baeed64a8d117eb82a2364d0f7154312788dd60d27bf73e7b5b",
+    "version": "1.0.15-dev.d9caec6",
+    "commit": "d9caec65177de7faa586c35bf583eab60a40ced6",
+    "sha256": "bdfc31538466a575c9a4aa8d7c2cf9678cf3ca4734f682c5381f0d697e567aa8",
     "ref": "preview",
     "flavor": "Forever",
     "contract_version": 4,
@@ -23,25 +23,25 @@
     "instance_quests": 1419
   },
   "counts": {
-    "quests": 5768,
-    "quests_with_coords": 5265,
-    "coord_pins": 9775,
-    "quests_with_turn_ins": 5460,
-    "turn_in_npcs": 1842,
-    "turn_in_objects": 202,
+    "quests": 5769,
+    "quests_with_coords": 5267,
+    "coord_pins": 9695,
+    "quests_with_turn_ins": 5462,
+    "turn_in_npcs": 1843,
+    "turn_in_objects": 203,
     "instance_quests": 678,
     "yearly_quests": 220,
-    "repeatable_quests": 742,
+    "repeatable_quests": 745,
     "monthly_quests": 0,
-    "breadcrumb_quests": 216,
-    "quests_with_races": 3925,
-    "quests_with_classes": 1034,
+    "breadcrumb_quests": 217,
+    "quests_with_races": 3923,
+    "quests_with_classes": 1035,
     "quests_with_skill": 230,
-    "quests_with_prereqs": 2752,
+    "quests_with_prereqs": 2765,
     "quests_with_alt_quests": 459
   },
   "start_gaps": {
-    "no_starter": 234,
+    "no_starter": 233,
     "item_no_drop_source": 249,
     "item_drop_no_spawn": 11,
     "starter_no_spawn": 9,
@@ -121,10 +121,10 @@
     ]
   },
   "turn_ins": {
-    "quests_with_turn_ins": 5460,
-    "npcs": 1842,
-    "objects": 202,
-    "npc_quests": 5223,
+    "quests_with_turn_ins": 5462,
+    "npcs": 1843,
+    "objects": 203,
+    "npc_quests": 5225,
     "object_only_quests": 237
   },
   "policy_coverage": {

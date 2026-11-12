@@ -43,7 +43,7 @@ Quest coordinates, starters, turn-in targets, and restrictions come from the [Qu
 ```bash
 go run ./cmd/fqp build-db \
   --questiedb /path/to/QuestieDB-Forever.zip \
-  --questiedb-sha f0442af288a63baeed64a8d117eb82a2364d0f7154312788dd60d27bf73e7b5b \
+  --questiedb-sha bdfc31538466a575c9a4aa8d7c2cf9678cf3ca4734f682c5381f0d697e567aa8 \
   --questiedb-ref preview \
   --questie /path/to/Questie \
   --questie-sha d0b0e89ac228e380e139f1c524408507e6d4fe1b \
@@ -104,6 +104,8 @@ The Go Lua-runtime tests require LuaJIT on `PATH`. On macOS with Homebrew, insta
 CI (`validate`) runs the Go tests, checks release intent, and dry-runs the packager. Database regeneration runs in the automated update workflow, not CI.
 
 ## Local builds
+
+After editing `CHANGELOG.md` for a player-facing release, run `go run ./cmd/fqp generate-news` and include `WhatsNew.lua` in the change. The generator selects the latest release with player-facing entries and omits QuestieDB artifact and quest-count entries. Database-only releases therefore do not produce a new chat announcement. The Go tests check that the generated file is current.
 
 Build a clean, directly installable addon folder with:
 

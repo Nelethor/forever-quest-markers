@@ -17,7 +17,7 @@ var rootFiles = []string{
 	"ATTRIBUTION.md", "AutoQuests.lua", "CHANGELOG.md", "Config.lua", "Core.lua",
 	"Eligibility.lua", "Events.lua", "HiddenQuests.lua", "NPCTooltips.lua", "QuestLinks.lua",
 	"ForeverQuestPins.toc", "LICENSE", "Localization.lua", "MapPins.lua", "MapPins.xml", "README.md",
-	"RELEASE_NOTES.md", "WarEffort.lua", "Waypoints.lua",
+	"RELEASE_NOTES.md", "Setup.lua", "WarEffort.lua", "WhatsNew.lua", "Waypoints.lua",
 }
 
 var directories = []string{"Database", "Media"}

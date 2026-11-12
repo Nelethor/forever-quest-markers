@@ -127,6 +127,8 @@ local function DecodeMirror()
     end
     mirror.waypointProvider = text:match("waypointProvider=(%a+)")
     mirror._revision = tonumber(text:match("revision=(%d+)")) or 0
+    mirror._setupComplete = text:match("setupComplete=1") ~= nil
+    mirror._newsVersion = text:match("newsVersion=([%d%.]+)")
     for key, raw in text:gmatch("([%w_]+)=([01])") do
         if type(ns.defaults[key]) == "boolean" then
             mirror[key] = raw == "1"
@@ -214,6 +216,8 @@ local function SaveMirror(db)
     end
     table.sort(keys)
     local parts = { "revision=" .. tostring(Revision(db)), "waypointProvider=" .. db.waypointProvider }
+    if db._setupComplete then parts[#parts + 1] = "setupComplete=1" end
+    if db._newsVersion then parts[#parts + 1] = "newsVersion=" .. db._newsVersion end
     parts[#parts + 1] = "autoAcceptLevelOffset=" .. tostring(db.autoAcceptLevelOffset or 1)
     parts[#parts + 1] = "iconScale=" .. tostring(db.iconScale or 100)
     parts[#parts + 1] = "trivialLevelGap=" .. tostring(db.trivialLevelGap or ns.defaults.trivialLevelGap)
@@ -251,13 +255,29 @@ function ns.InitSettings()
     local character = ForeverQuestPinsCharDB
     local legacyAccount = ForeverQuestPinsDB_Settings
     local legacyCharacter = ForeverQuestPinsCharacterSettings
+    local mirror = DecodeMirror()
     local source, revision = ChooseSettings(
         account,
         character,
         legacyAccount,
         legacyCharacter,
-        DecodeMirror()
+        mirror
     )
+
+    -- These markers do not participate in option revision selection.
+    local stores = { account, character, legacyAccount, legacyCharacter, mirror or {} }
+    local setupComplete, newsVersion = false, nil
+    for i = 1, #stores do
+        setupComplete = setupComplete or stores[i]._setupComplete == true
+        local version = stores[i]._newsVersion
+        if type(version) == "string" and version:match("^%d+%.%d+%.%d+$") then
+            local major, minor, patch = version:match("^(%d+)%.(%d+)%.(%d+)$")
+            local score = tonumber(major) * 100000000 + tonumber(minor) * 10000 + tonumber(patch)
+            if not newsVersion or score > newsVersion.score then
+                newsVersion = { value = version, score = score }
+            end
+        end
+    end
 
     if source.limitHighLevelQuests ~= nil then
         if not source.limitHighLevelQuests then
@@ -272,6 +292,10 @@ function ns.InitSettings()
     CopySettings(account, character, revision)
     CopySettings(account, legacyAccount, revision)
     CopySettings(account, legacyCharacter, revision)
+    for i = 1, 4 do
+        stores[i]._setupComplete = setupComplete or nil
+        stores[i]._newsVersion = newsVersion and newsVersion.value or nil
+    end
     ns.db = account
     ns.settingsSource = source == account and "account"
         or (source == character and "character"
@@ -279,6 +303,15 @@ function ns.InitSettings()
         or (source == legacyCharacter and "legacy-character" or "cvar")))
     SaveMirror(account)
     return account
+end
+
+function ns.SaveWelcomeState(setupComplete, newsVersion)
+    local db = ns.db or ns.InitSettings()
+    for _, store in ipairs({ ForeverQuestPinsDB, ForeverQuestPinsCharDB, ForeverQuestPinsDB_Settings, ForeverQuestPinsCharacterSettings }) do
+        if setupComplete then store._setupComplete = true end
+        if newsVersion then store._newsVersion = newsVersion end
+    end
+    SaveMirror(db)
 end
 
 local function SyncSettings()
@@ -420,8 +453,13 @@ end
 
 function ns.SlashCommand(msg)
     msg = (msg or ""):gsub("^%s+", ""):gsub("%s+$", ""):lower()
+    if msg == "setup" and ns.ShowSetup then
+        ns.ShowSetup()
+        return
+    end
     if msg == "" or msg == "help" then
         Print(L["Commands:"])
+        print(L["  /fqp setup   Open the setup guide"])
         print(L["  /fqp track <id> Track a quest start, objective, or turn-in"])
         print(L["  /fqp clear    Clear the addon waypoint"])
         print(L["  /fqp on       Enable quest-start pins"])
@@ -1028,6 +1066,7 @@ function ns.TryRegisterSettings()
 
     local panel = CreateFrame("Frame")
     panel.name = "Forever Quest Pins"
+    panel:Hide()
     panel:SetScript("OnShow", function(self)
         if not self.built then
             self.built = true

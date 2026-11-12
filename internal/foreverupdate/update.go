@@ -181,6 +181,9 @@ func Prepare(root string, build GameBuild, releaseDate string, dryRun bool) (Upd
 		if err := os.WriteFile(changelogPath, []byte(updatedChangelog), 0o644); err != nil {
 			return UpdateResult{}, err
 		}
+		if err := release.GenerateNews(root); err != nil {
+			return UpdateResult{}, err
+		}
 		if err := os.WriteFile(filepath.Join(root, "RELEASE_NOTES.md"), []byte(notes), 0o644); err != nil {
 			return UpdateResult{}, err
 		}

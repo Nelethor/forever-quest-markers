@@ -158,6 +158,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         return
     end
     if event == "PLAYER_LOGIN" then
+        if ns.StartWelcome then ns.StartWelcome() end
         ns.TryRegisterQuestLinks()
         ns.TryRegisterSettings()
         if ns.TryRegisterWorldMapDropdown then
