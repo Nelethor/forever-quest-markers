@@ -4,6 +4,7 @@ Notable changes to Forever Quest Pins. Numbered releases use `v*` tags. Builds f
 
 ## 1.0.1 - 2026-11-11
 
+- Correct spawn-location highlights when the world map is scaled.
 - Update the QuestieDB Forever artifact to `f0442af288a63baeed64a8d117eb82a2364d0f7154312788dd60d27bf73e7b5b` (build `7f629bf2f41c3bfe40bb8d5cec3b5691bb1d4dca`).
 - Ship 5768 quests with 9775 coordinate pins (678 static instance quests, 220 yearly quests).
 - Show seasonal and holiday pins only while their Questie event window is live instead of for the whole year.

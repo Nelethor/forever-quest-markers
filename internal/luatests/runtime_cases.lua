@@ -3135,6 +3135,7 @@ cases["map_pins_runtime.spawn_cloud_dots_use_map_pixels"] = function()
 
     ns.MapPins:Refresh("spawn-cloud")
     -- The hovered pin sits at the canvas point for (0.5, 0.5) at zoom 2.
+    pin.GetEffectiveScale = function() return 1 end
     pin.centerX, pin.centerY = 1000, 0
     pin.scripts.OnEnter(pin)
     assert(#cloudFrames == 2, "cloud dots " .. tostring(#cloudFrames))
@@ -3146,6 +3147,32 @@ cases["map_pins_runtime.spawn_cloud_dots_use_map_pixels"] = function()
     assert(math.abs(anchor.point[5] - 0) < 0.001, "anchor dot y " .. tostring(anchor.point[5]))
     assert(math.abs(second.point[4] - 1008) < 0.001, "second dot x " .. tostring(second.point[4]))
     assert(math.abs(second.point[5] - 0) < 0.001, "second dot y " .. tostring(second.point[5]))
+end
+
+cases["map_pins_runtime.spawn_cloud_tracks_scaled_map_and_ui"] = function()
+    setupPinRendering()
+    ns.Quests = {
+        [101] = { mapID = 1, x = 50, y = 50, title = "Spawn test",
+            coords = { { 50, 50, 1 }, { 50.4, 50.2, 1 } } },
+    }
+    ns.ByMap = { [1] = { 101 } }
+    options.showSpawnClusters = true
+    ns.MapPins:Refresh("scaled-spawn-cloud")
+    UIParent.GetEffectiveScale = function() return 0.8 end
+    local mapScale, zoom = 1, 1
+    mapCanvas.GetEffectiveScale = function() return 0.8 * mapScale * zoom end
+    pin.GetEffectiveScale = function() return 0.8 * mapScale end
+    for _, scenario in ipairs({ { 0.7, 1 }, { 1.4, 1 }, { 0.7, 2 }, { 1.4, 2 } }) do
+        mapScale, zoom = scenario[1], scenario[2]
+        -- The center returned by a scaled frame is in that frame's own units.
+        pin.centerX, pin.centerY = 600 / mapScale, 400 / mapScale
+        pin.scripts.OnEnter(pin)
+        local anchor, second = cloudFrames[1], cloudFrames[2]
+        assert(math.abs(anchor.point[4] - 600) < 0.001, "anchor x at scale " .. mapScale)
+        assert(math.abs(anchor.point[5] - 400) < 0.001, "anchor y at scale " .. mapScale)
+        assert(math.abs(second.point[4] - (600 + 4 * mapScale * zoom)) < 0.001, "spawn x at scale " .. mapScale)
+        assert(math.abs(second.point[5] - (400 - 1.6 * mapScale * zoom)) < 0.001, "spawn y at scale " .. mapScale)
+    end
 end
 
 cases["map_pins_runtime.stacked_quests_keep_separate_spawn_counts"] = function()
