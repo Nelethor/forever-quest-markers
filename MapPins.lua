@@ -14,6 +14,11 @@ local REPEATABLE_ICON_ATLAS = "QuestDaily"
 local REPEATABLE_ICON_FILE = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\QuestRepeatable"
 local INSTANCE_ICON_FILE = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Media\\QuestAttunement"
 local PROFESSION_PIN_R, PROFESSION_PIN_G, PROFESSION_PIN_B = 1.00, 0.65, 0.20
+-- Same look as ForeverQuestTint's map icons: a desaturated teal copy, solid over the
+-- bottom 45% and gone by 75%, leaving the icon's own yellow on top.
+local FOREVER_TINT_R, FOREVER_TINT_G, FOREVER_TINT_B = 0.44, 1.00, 1.00
+local FOREVER_SOLID = 0.45
+local FOREVER_FADE = 0.75
 local PIN_SIZE = 24
 -- Keep dense spawn loops together without merging separate camps. Six pins per
 -- quest cap a zone view while the hover cloud still shows every point.
@@ -519,7 +524,81 @@ local function ShowSpawnCloud(pin)
     lastStatus.cloudCount = shown
 end
 
-local function SetPinTexture(pin)
+local function HasForeverNewQuest(pin)
+    if not ns.IsForeverNewQuest then
+        return false
+    end
+    local quests = pin.quests
+    if quests and #quests > 0 then
+        for i = 1, #quests do
+            if ns.IsForeverNewQuest(quests[i].id) then
+                return true
+            end
+        end
+        return false
+    end
+    return ns.IsForeverNewQuest(pin.questID)
+end
+
+local function PlainYellowArt(pin)
+    if pin.icon == "atlas:" .. NORMAL_ICON_ATLAS then
+        local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(NORMAL_ICON_ATLAS)
+        if info then
+            return info.file or info.filename, info.leftTexCoord, info.rightTexCoord, info.topTexCoord,
+                info.bottomTexCoord
+        end
+    elseif pin.icon == "QuestAvailable.tga" then
+        return NORMAL_ICON_FILE, 0, 1, 0, 1
+    end
+    return nil
+end
+
+local function ApplyForeverGradient(pin)
+    local tex = pin.Texture
+    local file, l, r, t, b
+    if tex and ns.GetOption("highlightNewQuests") and HasForeverNewQuest(pin) then
+        file, l, r, t, b = PlainYellowArt(pin)
+    end
+    local solid, fade = pin.ForeverSolid, pin.ForeverFade
+    if not file or not CreateColor then
+        if solid then
+            solid:Hide()
+            fade:Hide()
+        end
+        return
+    end
+    if not solid then
+        solid = pin:CreateTexture(nil, "OVERLAY", nil, 7)
+        fade = pin:CreateTexture(nil, "OVERLAY", nil, 7)
+        pin.ForeverSolid, pin.ForeverFade = solid, fade
+        pin.ForeverColors = {
+            CreateColor(FOREVER_TINT_R, FOREVER_TINT_G, FOREVER_TINT_B, 1),
+            CreateColor(FOREVER_TINT_R, FOREVER_TINT_G, FOREVER_TINT_B, 0),
+        }
+    end
+    -- The icon drops one sublevel so the copy always draws over it.
+    tex:SetDrawLayer("OVERLAY", 6)
+    local height = pin:GetHeight()
+    if not height or height <= 0 then
+        height = PIN_SIZE
+    end
+    local opaque, clear = pin.ForeverColors[1], pin.ForeverColors[2]
+    local function slice(piece, from, to, low, high)
+        piece:ClearAllPoints()
+        piece:SetPoint("BOTTOMLEFT", pin, "BOTTOMLEFT", 0, height * from)
+        piece:SetPoint("BOTTOMRIGHT", pin, "BOTTOMRIGHT", 0, height * from)
+        piece:SetHeight(height * (to - from))
+        piece:SetTexture(file)
+        piece:SetTexCoord(l, r, b + (t - b) * to, b + (t - b) * from)
+        piece:SetDesaturated(true)
+        piece:SetGradient("VERTICAL", low, high)
+        piece:Show()
+    end
+    slice(solid, 0, FOREVER_SOLID, opaque, opaque)
+    slice(fade, FOREVER_SOLID, FOREVER_FADE, opaque, clear)
+end
+
+local function PaintPinIcon(pin)
     local fill, tex = EnsurePinTextures(pin)
     if not tex then
         lastStatus.icon = "none"
@@ -636,6 +715,11 @@ local function SetPinTexture(pin)
     end
     pin.icon = "none"
     lastStatus.icon = "none"
+end
+
+local function SetPinTexture(pin)
+    PaintPinIcon(pin)
+    ApplyForeverGradient(pin)
 end
 
 local function ReleasePin(pin)
