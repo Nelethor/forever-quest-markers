@@ -41,6 +41,14 @@ local PATROL_EXTRA = {
 
 local pool = {}
 local active = {}
+local refreshGeneration = 0
+local refreshJob
+-- Yield by elapsed script time and item count to keep each frame responsive.
+local MAX_REFRESH_ITEMS_PER_FRAME = 150
+local REFRESH_BUDGET_FRACTION = 0.30
+local MAX_REFRESH_BUDGET_MS = 5.0
+local PIN_FADE_ENABLED = true
+local PIN_FADE_DURATION = 0.18
 local hoveredPin
 local gamepadTooltip
 local gamepadTooltipPin
@@ -766,12 +774,18 @@ local function ReleasePin(pin)
     pin.attNy = nil
     pin.live = nil
     pin.titleReady = nil
+    pin._fqpFadeElapsed = nil
     pin.quests = nil
     pin.icon = nil
     pin.spawnPoints = nil
     pin.spawnCount = nil
     pin.anchor = nil
     pool[#pool + 1] = pin
+end
+
+function MapPins:CancelPendingRefresh()
+    refreshGeneration = refreshGeneration + 1
+    refreshJob = nil
 end
 
 function MapPins:Clear()
@@ -1396,6 +1410,39 @@ local function AppendSpawnPoints(pin, spawnPoints)
     pin.spawnCount = #pin.spawnPoints
 end
 
+local function GetRefreshBudgetMS()
+    local frameRate = GetFramerate and GetFramerate()
+    if type(frameRate) == "number" and frameRate > 0 then
+        return math.min(MAX_REFRESH_BUDGET_MS, (1000 / frameRate) * REFRESH_BUDGET_FRACTION)
+    end
+    return MAX_REFRESH_BUDGET_MS
+end
+
+local function StartPinFade(pin)
+    if not PIN_FADE_ENABLED then
+        pin._fqpFadeElapsed = nil
+        pin:SetAlpha(1)
+        return
+    end
+    pin._fqpFadeElapsed = 0
+    pin:SetAlpha(0)
+end
+
+local function UpdatePinFades(elapsed)
+    for i = 1, #active do
+        local pin = active[i]
+        if pin._fqpFadeElapsed then
+            pin._fqpFadeElapsed = pin._fqpFadeElapsed + elapsed
+            local alpha = pin._fqpFadeElapsed / PIN_FADE_DURATION
+            if alpha >= 1 then
+                pin._fqpFadeElapsed = nil
+                alpha = 1
+            end
+            pin:SetAlpha(alpha)
+        end
+    end
+end
+
 local function PlacePin(parent, nx, ny, questID, data, reason, live, spawnPoints, anchor)
     if not spawnPoints then
         spawnPoints = { {
@@ -1440,6 +1487,7 @@ local function PlacePin(parent, nx, ny, questID, data, reason, live, spawnPoints
     SetPinTexture(pin)
     ApplyPinPoint(pin, parent)
     pin:Show()
+    StartPinFade(pin)
     active[#active + 1] = pin
     ns.PrefetchQuestInfo(questID, data)
     return true
@@ -1821,6 +1869,7 @@ function MapPins:Refresh(reason)
         lastStatus.mode = "combat-deferred"
         return
     end
+    self:CancelPendingRefresh()
     local stitched = IsOpenMapStitched()
     if stitched and stitchedPins and (reason == "map-changed" or reason == "map-display") then
         if ReprojectStitchedPins(ns.GetViewedMapID()) then return end
@@ -1913,30 +1962,76 @@ function MapPins:Refresh(reason)
         end
     end
 
+    local candidates = {}
     for mapIndex = 1, #maps do
         local mapID = maps[mapIndex]
         local list = byMap[mapID]
         if list then
             for i = 1, #list do
-                consider(list[i])
+                candidates[#candidates + 1] = list[i]
             end
         end
     end
     if ns.offeredQuestIDs then
         for questID in pairs(ns.offeredQuestIDs) do
-            consider(questID)
+            candidates[#candidates + 1] = questID
         end
     end
 
-    lastStatus.count = painted
-    lastStatus.mode = "canvas"
-    local managed = 0
-    for i = 1, #active do
-        if active[i].managed then
-            managed = managed + 1
+    lastStatus.mode = "painting"
+    local job = { generation = refreshGeneration, mapID = viewedMapID, index = 1 }
+    refreshJob = job
+    local function processBatch()
+        if refreshJob ~= job or job.generation ~= refreshGeneration then
+            return
         end
+        if InCombatLockdown and InCombatLockdown() then
+            refreshJob = nil
+            lastStatus.mode = "combat-deferred"
+            return
+        end
+        if not WorldMapFrame or (WorldMapFrame.IsShown and not WorldMapFrame:IsShown())
+            or ns.GetViewedMapID() ~= job.mapID then
+            refreshJob = nil
+            if not (InCombatLockdown and InCombatLockdown()) then
+                MapPins:Clear()
+            end
+            lastStatus.mode = "refresh-interrupted"
+            return
+        end
+
+        local profileStart = type(debugprofilestop) == "function" and debugprofilestop() or nil
+        local processed = 0
+        local itemLimit = profileStart and MAX_REFRESH_ITEMS_PER_FRAME or 60
+        local timeBudget = GetRefreshBudgetMS()
+        while job.index <= #candidates and processed < itemLimit do
+            consider(candidates[job.index])
+            job.index = job.index + 1
+            processed = processed + 1
+            if profileStart and processed > 0
+                and (debugprofilestop() - profileStart) >= timeBudget then
+                break
+            end
+        end
+
+        lastStatus.count = painted
+        if job.index <= #candidates then
+            C_Timer.After(0, processBatch)
+            return
+        end
+
+        refreshJob = nil
+        lastStatus.mode = "canvas"
+        local managed = 0
+        for i = 1, #active do
+            if active[i].managed then
+                managed = managed + 1
+            end
+        end
+        lastStatus.managed = managed
     end
-    lastStatus.managed = managed
+
+    processBatch()
     if ns.GetOption("debug") and reason then
         -- Keep this cheap; stats are available via /fqp stats.
     end
@@ -2008,6 +2103,7 @@ local function OnMapClose()
     hoveredPin = nil
     HideGamepadTooltip()
     InvalidateCanvas()
+    MapPins:CancelPendingRefresh()
     MapPins:Clear()
 end
 
@@ -2027,6 +2123,7 @@ mapWatch:SetScript("OnUpdate", function(_, elapsed)
     end
     if #active > 0 then
         MapPins:RepositionAll()
+        UpdatePinFades(elapsed)
         if IsGamepadUIEnabled() then
             gamepadHoverAccum = gamepadHoverAccum + elapsed
             if gamepadHoverAccum >= 0.05 then
@@ -2079,6 +2176,15 @@ function MapPins:HookMap()
             InvalidateCanvas()
             if stitchedPins and IsOpenMapStitched() and ReprojectStitchedPins(ns.GetViewedMapID()) then
                 return
+            end
+            local previousMapID = lastStatus.viewedMap
+            local viewedMapID = ns.GetViewedMapID()
+            if previousMapID and viewedMapID and previousMapID ~= viewedMapID then
+                -- Remove the previous zone's pins now; the debounced, sliced
+                -- refresh will paint the new zone over the next few frames.
+                MapPins:CancelPendingRefresh()
+                MapPins:Clear()
+                lastStatus.mode = "map-changing"
             end
             ns.RequestRefresh("map-changed")
         end)
